@@ -5,7 +5,7 @@
 //! Side Effects: None; proxy::run owns raw persistence.
 
 use crate::adapters::common::{
-    compact_edges, make_result, merge_streams, signal_lines, strip_ansi_escape,
+    compact_edges, make_result, merge_streams, normalized_command, signal_lines, strip_ansi_escape,
 };
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::{CommandAst, CommandKind};
@@ -36,10 +36,11 @@ impl CommandAdapter for BuildAdapter {
         // Strip ANSI colors before signal analysis (build tools often use colored output)
         let clean = strip_ansi_escape(&merged);
         let signals = signal_lines(&clean, 80);
+        let command = normalized_command(&meta.program, &meta.args);
         let mut rendered = if exit_code == 0 {
-            format!("build ok: {}", meta.command)
+            format!("build ok: {command}")
         } else {
-            format!("build failed: {}", meta.command)
+            format!("build failed: {command}")
         };
         if !signals.is_empty() {
             rendered.push_str("\n\nerrors and warnings:");
@@ -52,7 +53,7 @@ impl CommandAdapter for BuildAdapter {
         }
         make_result(
             self.name(),
-            meta.command.clone(),
+            normalized_command(&meta.program, &meta.args),
             rendered,
             String::new(),
             exit_code,

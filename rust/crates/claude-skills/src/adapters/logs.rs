@@ -5,7 +5,7 @@
 //! Side Effects: None; raw recovery is handled by proxy::run.
 
 use crate::adapters::common::{
-    compact_edges, dedup_lines, make_result, merge_streams, signal_lines,
+    compact_edges, dedup_lines, make_result, merge_streams, normalized_command, signal_lines,
 };
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::{CommandAst, CommandKind};
@@ -33,6 +33,7 @@ impl CommandAdapter for LogsAdapter {
         // Deduplicate consecutive identical log lines (common in docker/kubectl polling)
         let deduped = dedup_lines(&merged);
         let signals = signal_lines(&deduped, 100);
+        let command = normalized_command(&meta.program, &meta.args);
         let mut rendered = format!(
             "{}: {}",
             if exit_code == 0 {
@@ -40,7 +41,7 @@ impl CommandAdapter for LogsAdapter {
             } else {
                 "infra failed"
             },
-            meta.command
+            command
         );
         if !signals.is_empty() {
             rendered.push_str("\n\nsignal:");
@@ -53,7 +54,7 @@ impl CommandAdapter for LogsAdapter {
         }
         make_result(
             self.name(),
-            meta.command.clone(),
+            normalized_command(&meta.program, &meta.args),
             rendered,
             String::new(),
             exit_code,

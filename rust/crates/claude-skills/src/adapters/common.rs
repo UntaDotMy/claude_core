@@ -152,6 +152,14 @@ pub fn command_program(command: &str) -> String {
         .to_ascii_lowercase()
 }
 
+pub fn normalized_command(program: &str, args: &[String]) -> String {
+    if args.is_empty() {
+        program.to_string()
+    } else {
+        format!("{} {}", program, args.join(" "))
+    }
+}
+
 pub fn merge_streams(stdout: &[u8], stderr: &[u8]) -> String {
     let stdout = String::from_utf8_lossy(stdout);
     let stderr = String::from_utf8_lossy(stderr);

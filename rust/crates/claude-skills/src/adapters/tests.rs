@@ -4,7 +4,7 @@
 //! Main Functions: TestAdapter::compact.
 //! Side Effects: None; proxy::run persists raw and compact output.
 
-use crate::adapters::common::{make_result, merge_streams};
+use crate::adapters::common::{make_result, merge_streams, normalized_command};
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::{CommandAst, CommandKind};
 use crate::proxy::raw_store::RunMeta;
@@ -54,14 +54,14 @@ impl CommandAdapter for TestAdapter {
                     compact_stdout.push_str(&line);
                 }
             }
-            let rerun = rerun_hint(&meta.command, &failure_lines);
+            let rerun = rerun_hint(&meta.program, &meta.args, &failure_lines);
             compact_stdout.push_str(&format!("\n\nrerun:\n{rerun}"));
         }
 
         let compact_stderr = String::new();
         make_result(
             self.name(),
-            meta.command.clone(),
+            normalized_command(&meta.program, &meta.args),
             compact_stdout,
             compact_stderr,
             exit_code,
@@ -118,22 +118,25 @@ fn collect_failure_lines(text: &str) -> Vec<String> {
     failures
 }
 
-fn rerun_hint(command: &str, failure_lines: &[String]) -> String {
-    let command = command.trim();
+fn rerun_hint(program: &str, args: &[String], failure_lines: &[String]) -> String {
+    let command = normalized_command(program, args);
     let test_ids: Vec<&str> = failure_lines
         .iter()
         .filter_map(|line| line.split_whitespace().find(|part| part.contains("::")))
         .take(8)
         .collect();
-    if command.contains("pytest") && !test_ids.is_empty() {
+    if program.eq_ignore_ascii_case("pytest") && !test_ids.is_empty() {
         return format!("pytest {} -q", test_ids.join(" "));
     }
-    if command.contains("pytest") && !command.contains("-q") {
+    if program.eq_ignore_ascii_case("pytest") && !args.iter().any(|arg| arg == "-q") {
         format!("{command} -q")
-    } else if command.contains("cargo test") && !command.contains("-- --nocapture") {
+    } else if program.eq_ignore_ascii_case("cargo")
+        && args.iter().any(|arg| arg == "test")
+        && !command.contains("-- --nocapture")
+    {
         format!("{command} -- --nocapture")
     } else {
-        command.to_string()
+        command
     }
 }
 
@@ -176,23 +179,66 @@ mod tests {
     }
 
     #[test]
-    fn cargo_fail_keeps_panic_and_result_line() {
-        let stdout = "---- proxy::tests::keeps_signal stdout ----\nthread 'proxy::tests::keeps_signal' panicked at src/proxy/run.rs:88: expected ok\ntest result: FAILED. 4 passed; 1 failed; 0 ignored; finished in 0.01s\n";
+    fn wrapped_pytest_rerun_hint_is_unwrapped() {
+        let stdout = "tests/api/test_users.py::test_create_user FAILED\nE AssertionError: expected 201, got 500\n2 failed, 143 passed in 12.8s\n";
         let result = TestAdapter.compact(
             stdout.as_bytes(),
             b"",
-            101,
-            &meta("cargo test", stdout.len()),
+            1,
+            &wrapped_meta(
+                "bash -lc 'pytest tests'",
+                "pytest",
+                &["tests"],
+                stdout.len(),
+            ),
         );
-        assert!(result.stdout.contains("test result: FAILED"));
-        assert!(result.stdout.contains("panicked"));
-        assert!(result.stdout.contains("src/proxy/run.rs:88"));
+        assert!(result
+            .stdout
+            .contains("rerun:\npytest tests/api/test_users.py::test_create_user -q"));
+        assert!(!result.stdout.contains("bash -lc"));
     }
 
     fn meta(command: &str, stdout_bytes: usize) -> RunMeta {
+        let (program, args) = if command == "cargo test" {
+            ("cargo".to_string(), vec!["test".to_string()])
+        } else {
+            (
+                "pytest".to_string(),
+                vec!["tests".to_string(), "-q".to_string()],
+            )
+        };
         RunMeta {
             raw_id: "test-raw".to_string(),
             command: command.to_string(),
+            program,
+            args,
+            cwd: PathBuf::from("."),
+            started_at: 1,
+            duration_ms: 1,
+            exit_code: 1,
+            adapter_name: "tests".to_string(),
+            raw_path: PathBuf::from("/tmp/test-raw"),
+            compact_path: PathBuf::new(),
+            agent: "test".to_string(),
+            workspace: PathBuf::from("."),
+            stdout_bytes,
+            stderr_bytes: 0,
+            compact_stdout_bytes: 0,
+            compact_stderr_bytes: 0,
+            estimated_tokens_before: stdout_bytes / 4,
+            estimated_tokens_after: 0,
+            estimated_tokens_saved: 0,
+            savings_pct: 0.0,
+            compacted: false,
+        }
+    }
+
+    fn wrapped_meta(command: &str, program: &str, args: &[&str], stdout_bytes: usize) -> RunMeta {
+        RunMeta {
+            raw_id: "test-raw".to_string(),
+            command: command.to_string(),
+            program: program.to_string(),
+            args: args.iter().map(|arg| (*arg).to_string()).collect(),
             cwd: PathBuf::from("."),
             started_at: 1,
             duration_ms: 1,

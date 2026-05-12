@@ -4,7 +4,7 @@
 //! Main Functions: SearchAdapter::compact.
 //! Side Effects: None; proxy::run saves raw and compact output.
 
-use crate::adapters::common::{compact_edges, make_result};
+use crate::adapters::common::{compact_edges, make_result, normalized_command};
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::{CommandAst, CommandKind};
 use crate::proxy::raw_store::RunMeta;
@@ -33,7 +33,7 @@ impl CommandAdapter for SearchAdapter {
         let compacted = grouped != stdout_text || stdout_text.lines().count() > 40;
         make_result(
             self.name(),
-            meta.command.clone(),
+            normalized_command(&meta.program, &meta.args),
             grouped,
             compact_edges(&stderr_text, "search diagnostics", 40),
             exit_code,
@@ -113,6 +113,8 @@ mod tests {
         RunMeta {
             raw_id: "raw".to_string(),
             command: "rg CompactResult .".to_string(),
+            program: "rg".to_string(),
+            args: vec!["CompactResult".to_string(), ".".to_string()],
             cwd: PathBuf::from("."),
             started_at: 1,
             duration_ms: 1,

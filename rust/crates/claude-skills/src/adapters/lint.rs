@@ -4,7 +4,9 @@
 //! Main Functions: LintAdapter::compact.
 //! Side Effects: None; proxy::run writes raw and compact artifacts.
 
-use crate::adapters::common::{make_result, merge_streams, signal_lines, strip_ansi_escape};
+use crate::adapters::common::{
+    make_result, merge_streams, normalized_command, signal_lines, strip_ansi_escape,
+};
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::{CommandAst, CommandKind};
 use crate::proxy::raw_store::RunMeta;
@@ -31,10 +33,11 @@ impl CommandAdapter for LintAdapter {
         // Strip ANSI colors (linters typically output colored diagnostics)
         let clean = strip_ansi_escape(&merged);
         let signals = signal_lines(&clean, 120);
+        let command = normalized_command(&meta.program, &meta.args);
         let mut rendered = if exit_code == 0 {
-            format!("lint ok: {}", meta.command)
+            format!("lint ok: {command}")
         } else {
-            format!("lint failed: {}", meta.command)
+            format!("lint failed: {command}")
         };
         if !signals.is_empty() {
             rendered.push_str("\n\ndiagnostics:");
@@ -44,7 +47,7 @@ impl CommandAdapter for LintAdapter {
         }
         make_result(
             self.name(),
-            meta.command.clone(),
+            normalized_command(&meta.program, &meta.args),
             rendered,
             String::new(),
             exit_code,

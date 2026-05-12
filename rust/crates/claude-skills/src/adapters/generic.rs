@@ -5,7 +5,7 @@
 //! Side Effects: None; raw recovery is owned by proxy::run.
 
 use crate::adapters::common::{
-    compact_json_structure, dedup_lines, make_result, strip_ansi_escape,
+    compact_json_structure, dedup_lines, make_result, normalized_command, strip_ansi_escape,
 };
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::CommandAst;
@@ -57,7 +57,7 @@ impl CommandAdapter for GenericAdapter {
             self.name(),
             format!(
                 "[claude-skills] compacted command output\ncommand: {}\nreducer: generic-high-signal; command_family: generic\nstdout: {} lines, {} bytes; stderr: {} lines, {} bytes",
-                meta.command,
+                normalized_command(&meta.program, &meta.args),
                 stdout.lines().count(),
                 stdout.len(),
                 stderr.lines().count(),
@@ -187,6 +187,8 @@ mod tests {
         RunMeta {
             raw_id: "test-raw".to_string(),
             command: "unknown noisy".to_string(),
+            program: "unknown".to_string(),
+            args: vec!["noisy".to_string()],
             cwd: PathBuf::from("."),
             started_at: 1,
             duration_ms: 1,

@@ -118,6 +118,8 @@ pub fn run_proxy(
             let mut meta = RunMeta {
                 raw_id: raw_id.clone(),
                 command: shell_join(&command_arguments),
+                program: ast.program.clone(),
+                args: ast.args.clone(),
                 cwd: cwd.clone(),
                 started_at,
                 duration_ms: duration.as_millis() as u64,

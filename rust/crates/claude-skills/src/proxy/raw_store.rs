@@ -15,6 +15,10 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub struct RunMeta {
     pub raw_id: String,
     pub command: String,
+    #[serde(default)]
+    pub program: String,
+    #[serde(default)]
+    pub args: Vec<String>,
     pub cwd: PathBuf,
     pub started_at: u64,
     pub duration_ms: u64,
@@ -216,6 +220,8 @@ mod tests {
         let mut meta = RunMeta {
             raw_id: "20260512-143012-a1b2c3d4".to_string(),
             command: "pytest tests -q".to_string(),
+            program: "pytest".to_string(),
+            args: vec!["tests".to_string(), "-q".to_string()],
             cwd: PathBuf::from("."),
             started_at: 1,
             duration_ms: 2,

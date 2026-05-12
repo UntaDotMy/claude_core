@@ -30,9 +30,8 @@ impl CommandAdapter for GitAdapter {
     ) -> CompactResult {
         let stdout = String::from_utf8_lossy(stdout);
         let stderr = String::from_utf8_lossy(stderr);
-        let ast = CommandAst::from_command_text(&meta.command, meta.cwd.clone());
 
-        let compact_stdout = match git_subcommand(&ast).as_deref() {
+        let compact_stdout = match git_subcommand(&meta.program, &meta.args).as_deref() {
             Some("status") => compact_status(&stdout),
             Some("diff") => compact_diff(&stdout),
             Some("show") => compact_edges(&stdout, "show summary", LINE_LIMIT),
@@ -51,7 +50,7 @@ impl CommandAdapter for GitAdapter {
             self.name(),
             format!(
                 "git {}",
-                git_subcommand(&ast).unwrap_or_else(|| "command".to_string())
+                git_subcommand(&meta.program, &meta.args).unwrap_or_else(|| "command".to_string())
             ),
             compact_stdout,
             compact_stderr,
@@ -62,11 +61,11 @@ impl CommandAdapter for GitAdapter {
     }
 }
 
-fn git_subcommand(ast: &CommandAst) -> Option<String> {
-    if ast.program.ends_with("gh") || ast.program.ends_with("gh.exe") {
-        return ast.args.first().map(|arg| format!("gh {arg}"));
+fn git_subcommand(program: &str, args: &[String]) -> Option<String> {
+    if program.eq_ignore_ascii_case("gh") || program.to_ascii_lowercase().ends_with("gh.exe") {
+        return args.first().map(|arg| format!("gh {arg}"));
     }
-    ast.args.iter().find(|arg| !arg.starts_with('-')).cloned()
+    args.iter().find(|arg| !arg.starts_with('-')).cloned()
 }
 
 fn compact_status(stdout: &str) -> String {
@@ -184,17 +183,36 @@ mod tests {
     }
 
     #[test]
-    fn git_diff_summarizes_files_and_hunks() {
-        let stdout = "diff --git a/src/lib.rs b/src/lib.rs\n@@ -1 +1 @@\n-old\n+new\n";
-        let result = GitAdapter.compact(stdout.as_bytes(), b"", 0, &meta("git diff", stdout.len()));
-        assert!(result.stdout.contains("1 files changed, +1 -1"));
-        assert!(result.stdout.contains("important hunks"));
+    fn wrapped_git_status_uses_normalized_subcommand() {
+        let stdout = "On branch main\n M src/lib.rs\n";
+        let result = GitAdapter.compact(
+            stdout.as_bytes(),
+            b"",
+            0,
+            &wrapped_meta("bash -lc 'git status'", "git", &["status"]),
+        );
+        assert!(result.stdout.contains("branch: main"));
+        assert_eq!(result.summary, "git status");
     }
 
     fn meta(command: &str, stdout_bytes: usize) -> RunMeta {
+        let (program, args) = if command == "git diff" {
+            ("git".to_string(), vec!["diff".to_string()])
+        } else {
+            (
+                "git".to_string(),
+                vec![
+                    "status".to_string(),
+                    "--short".to_string(),
+                    "--branch".to_string(),
+                ],
+            )
+        };
         RunMeta {
             raw_id: "raw".to_string(),
             command: command.to_string(),
+            program,
+            args,
             cwd: PathBuf::from("."),
             started_at: 1,
             duration_ms: 1,
@@ -209,6 +227,33 @@ mod tests {
             compact_stdout_bytes: 0,
             compact_stderr_bytes: 0,
             estimated_tokens_before: stdout_bytes / 4,
+            estimated_tokens_after: 0,
+            estimated_tokens_saved: 0,
+            savings_pct: 0.0,
+            compacted: false,
+        }
+    }
+
+    fn wrapped_meta(command: &str, program: &str, args: &[&str]) -> RunMeta {
+        RunMeta {
+            raw_id: "raw".to_string(),
+            command: command.to_string(),
+            program: program.to_string(),
+            args: args.iter().map(|arg| (*arg).to_string()).collect(),
+            cwd: PathBuf::from("."),
+            started_at: 1,
+            duration_ms: 1,
+            exit_code: 0,
+            adapter_name: "git".to_string(),
+            raw_path: PathBuf::from("/tmp/raw"),
+            compact_path: PathBuf::new(),
+            agent: "test".to_string(),
+            workspace: PathBuf::from("."),
+            stdout_bytes: 32,
+            stderr_bytes: 0,
+            compact_stdout_bytes: 0,
+            compact_stderr_bytes: 0,
+            estimated_tokens_before: 8,
             estimated_tokens_after: 0,
             estimated_tokens_saved: 0,
             savings_pct: 0.0,

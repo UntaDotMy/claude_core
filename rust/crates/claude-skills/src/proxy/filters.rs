@@ -4,7 +4,7 @@
 //! Main Functions: load_project_filter_adapters.
 //! Side Effects: Reads optional filter files from the current workspace.
 
-use crate::adapters::common::make_result;
+use crate::adapters::common::{make_result, normalized_command};
 use crate::proxy::adapter::{CommandAdapter, CompactResult};
 use crate::proxy::command_ast::CommandAst;
 use crate::proxy::raw_store::RunMeta;
@@ -29,8 +29,11 @@ impl CommandAdapter for ProjectFilterAdapter {
     }
 
     fn matches(&self, ast: &CommandAst) -> bool {
+        let normalized = normalized_command(&ast.program, &ast.args);
         !self.filter.command.is_empty()
             && (ast.original_command.starts_with(&self.filter.command)
+                || normalized.starts_with(&self.filter.command)
+                || ast.program.eq_ignore_ascii_case(&self.filter.command)
                 || ast.program.ends_with(&self.filter.command))
     }
 
@@ -44,7 +47,7 @@ impl CommandAdapter for ProjectFilterAdapter {
         if matches!(self.filter.exit_code, Some(expected) if expected != exit_code) {
             return make_result(
                 self.name(),
-                meta.command.clone(),
+                normalized_command(&meta.program, &meta.args),
                 String::from_utf8_lossy(stdout).to_string(),
                 String::from_utf8_lossy(stderr).to_string(),
                 exit_code,
