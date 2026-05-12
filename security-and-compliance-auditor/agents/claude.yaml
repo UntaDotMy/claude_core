@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can push deeper on security review and compliance risk without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "Security & Compliance Auditor"
+  short_description: "Analysis-first security review, threat modeling, and remediation guidance"
+  default_prompt: "Use $security-and-compliance-auditor when the main risk is exploitability, trust-boundary design, secrets or identity posture, compliance evidence, or remediation quality. Start from a working brief, name the attack path and blast radius, and prefer fixes that remove the root cause instead of narrowing one symptom. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true

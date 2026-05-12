@@ -1,0 +1,2 @@
+# Keep repo-managed text files on LF across platforms, including Windows checkouts.
+* text=auto eol=lf

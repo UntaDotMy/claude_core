@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline because this skill
+# guards brownfield ownership, flow tracing, and preservation-sensitive edits.
+reasoning_effort: "high"
+interface:
+  display_name: "Preserve Existing Flow"
+  short_description: "Brownfield flow preservation"
+  default_prompt: "Use $preserve-existing-flow before modifying an existing source file, codebase flow, state machine, handler, queue, transport path, firmware path, protocol path, scheduler, or source-of-truth owner. Start with a working brief that names requested behavior, current behavior to preserve, the current owner path, evidence still needed, and whether the task is read-only, review-only, or implementation-approved. Trace target file or function, entry point, producer, source of truth, storage or queue, side-effect owner, consumer, cleanup or recovery, edit boundary, and validation evidence before editing; record that evidence in the global per-workspace flow-check artifact unless the work is docs-only, formatting-only, generated-only, or explicitly greenfield. Layer new behavior through the existing owner unless the user explicitly approves an ownership migration. Reject direct sends from producer code, incompatible queue payloads, speculative fallbacks, duplicate helpers, and partial slices presented as complete. Reconcile startup, runtime, failure, retry, and recovery validation before finalizing. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true

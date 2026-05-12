@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can drive deeper planning, sequencing, and risk analysis without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "Software Development Life Cycle"
+  short_description: "Analysis-first SDLC architecture and quality guidance"
+  default_prompt: "Use $software-development-life-cycle when the main problem is working-brief hardening, scope framing, architecture sequencing, or cross-domain delivery planning. Start from a working brief, keep the first pass anchored to the named scope, and use the native repo-aware search loop: exact symbol or path search first, then direct callers and callees, then wider repo scans only when the narrower pass is insufficient. Map layers, validation order, rollout order, and lifecycle risks, then hand implementation to the owning specialist; for non-trivial work, do not stay solo by default. Avoid hardcoded runtime values when config, derivation, or existing constants should own them. If the target path or scope is ambiguous, ask before changing files. For non-trivial delivery, treat implementation as a loop: implement, re-read the raw request and working brief, rerun the narrowest validation, fix what breaks, and put the finished delta through reviewer before claiming production readiness. Do not add speculative fallback branches, duplicate helper functions, or workaround-only code to hide an untraced root cause. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: false

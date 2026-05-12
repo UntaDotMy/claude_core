@@ -1,0 +1,441 @@
+{
+  "suite_name": "claude_skills benchmark demo suite",
+  "updated_at": "2026-04-07T05:33:54Z",
+  "shared_harness": {
+    "harness_name": "shared_codex_workflow_benchmark",
+    "harness_version": 1,
+    "current_scope": "claude_skills ships source-backed runs for the tracked scenarios here; runtime-shell comparator, workflow-teaching comparator, and swarm-automation comparator now share the same scenario contract and evidence fields through the competitive surface matrix, but the peer repos still need source-backed runs recorded under this harness.",
+    "repositories": [
+      {
+        "repository_id": "claude_skills",
+        "repository_url": "https://github.com/UntaDotMy/claude_skills",
+        "current_evidence_status": "source_backed_runs_published"
+      },
+      {
+        "repository_id": "runtime-shell comparator",
+        "repository_url": "external-runtime-shell-source",
+        "current_evidence_status": "shared_harness_contract_published"
+      },
+      {
+        "repository_id": "workflow-teaching comparator",
+        "repository_url": "external-workflow-teaching-source",
+        "current_evidence_status": "shared_harness_contract_published"
+      },
+      {
+        "repository_id": "swarm-automation comparator",
+        "repository_url": "external-swarm-automation-source",
+        "current_evidence_status": "public_surface_only"
+      }
+    ],
+    "scorecard_columns": [
+      "scenario_id",
+      "repository_id",
+      "source_kind",
+      "source_url",
+      "evidence_status",
+      "commands_or_artifacts",
+      "proof_summary",
+      "final_outcome"
+    ],
+    "evidence_format": {
+      "required_fields": [
+        "scenario_id",
+        "repository_id",
+        "source_kind",
+        "source_url",
+        "commands_or_artifacts",
+        "proof_summary",
+        "final_outcome"
+      ],
+      "allowed_source_kinds": [
+        "merged_pr",
+        "release_artifact",
+        "public_docs",
+        "hosted_check_run",
+        "issue_or_audit_bundle"
+      ],
+      "allowed_evidence_statuses": [
+        "source_backed",
+        "public_surface_only",
+        "planned"
+      ],
+      "minimum_proof_expectations": [
+        "Use the same scenario ids across claude_skills, runtime-shell comparator, and workflow-teaching comparator.",
+        "Record one source URL and one proof summary for every scorecard entry.",
+        "Keep scorecard claims source-backed instead of relying on prose-only impressions.",
+        "Do not claim a peer repo passed a scenario until the shared evidence fields are populated for that repo."
+      ]
+    }
+  },
+  "competitive_surfaces": [
+    {
+      "surface_id": "operator_shell_and_runtime_workflow",
+      "title": "Operator shell and runtime workflow",
+      "scenario_ids": [
+        "greenfield_feature_delivery_route_ux",
+        "pr_fix_windows_hosted_check",
+        "windows_validation_recovery_stable_checkout"
+      ],
+      "repository_ids": [
+        "claude_skills",
+        "runtime-shell comparator",
+        "workflow-teaching comparator",
+        "swarm-automation comparator"
+      ],
+      "evidence_status_by_repository": {
+        "claude_skills": "source_backed",
+        "runtime-shell comparator": "public_surface_only",
+        "workflow-teaching comparator": "public_surface_only",
+        "swarm-automation comparator": "public_surface_only"
+      },
+      "source_kind_by_repository": {
+        "claude_skills": "issue_or_audit_bundle",
+        "runtime-shell comparator": "public_docs",
+        "workflow-teaching comparator": "public_docs",
+        "swarm-automation comparator": "public_docs"
+      },
+      "source_url_by_repository": {
+        "claude_skills": "docs/audits/2026-04-09-benchmark-posture/audit-summary.md",
+        "runtime-shell comparator": "external-runtime-shell-source",
+        "workflow-teaching comparator": "external-workflow-teaching-source",
+        "swarm-automation comparator": "external-swarm-automation-source"
+      },
+      "commands_or_artifacts": [
+        "docs/benchmark-suite.md",
+        "docs/shared-benchmark-harness.md",
+        "docs/benchmark-comparison-scorecard.md",
+        "docs/audits/2026-04-09-benchmark-posture/audit-summary.md"
+      ],
+      "proof_summary": "Operator-shell evidence is now normalized across the four repos, with claude_skills source-backed and the peers still public-surface-only.",
+      "final_outcome": "comparison_matrix_published"
+    },
+    {
+      "surface_id": "workflow_teaching_and_named_progression",
+      "title": "Workflow teaching and named progression",
+      "scenario_ids": [
+        "docs_governance_first_success_path",
+        "regression_hardening_autopilot_defaults",
+        "multi_agent_closure_proof"
+      ],
+      "repository_ids": [
+        "claude_skills",
+        "runtime-shell comparator",
+        "workflow-teaching comparator",
+        "swarm-automation comparator"
+      ],
+      "evidence_status_by_repository": {
+        "claude_skills": "source_backed",
+        "runtime-shell comparator": "public_surface_only",
+        "workflow-teaching comparator": "public_surface_only",
+        "swarm-automation comparator": "public_surface_only"
+      },
+      "source_kind_by_repository": {
+        "claude_skills": "issue_or_audit_bundle",
+        "runtime-shell comparator": "public_docs",
+        "workflow-teaching comparator": "public_docs",
+        "swarm-automation comparator": "public_docs"
+      },
+      "source_url_by_repository": {
+        "claude_skills": "docs/audits/2026-04-09-benchmark-posture/audit-summary.md",
+        "runtime-shell comparator": "external-runtime-shell-source",
+        "workflow-teaching comparator": "external-workflow-teaching-source",
+        "swarm-automation comparator": "external-swarm-automation-source"
+      },
+      "commands_or_artifacts": [
+        "docs/benchmark-suite.md",
+        "docs/shared-benchmark-harness.md",
+        "docs/benchmark-comparison-scorecard.md",
+        "docs/audits/2026-04-09-benchmark-posture/audit-summary.md"
+      ],
+      "proof_summary": "Workflow-teaching evidence is now normalized across the four repos, with named progression kept separate from runtime shell proof.",
+      "final_outcome": "comparison_matrix_published"
+    },
+    {
+      "surface_id": "branch_closeout_and_hosted_repair",
+      "title": "Branch closeout and hosted repair",
+      "scenario_ids": [
+        "branch_closeout_release_docs",
+        "pr_fix_windows_hosted_check"
+      ],
+      "repository_ids": [
+        "claude_skills",
+        "runtime-shell comparator",
+        "workflow-teaching comparator",
+        "swarm-automation comparator"
+      ],
+      "evidence_status_by_repository": {
+        "claude_skills": "source_backed",
+        "runtime-shell comparator": "public_surface_only",
+        "workflow-teaching comparator": "public_surface_only",
+        "swarm-automation comparator": "public_surface_only"
+      },
+      "source_kind_by_repository": {
+        "claude_skills": "issue_or_audit_bundle",
+        "runtime-shell comparator": "public_docs",
+        "workflow-teaching comparator": "public_docs",
+        "swarm-automation comparator": "public_docs"
+      },
+      "source_url_by_repository": {
+        "claude_skills": "docs/audits/2026-04-09-benchmark-posture/audit-summary.md",
+        "runtime-shell comparator": "external-runtime-shell-source",
+        "workflow-teaching comparator": "external-workflow-teaching-source",
+        "swarm-automation comparator": "external-swarm-automation-source"
+      },
+      "commands_or_artifacts": [
+        "docs/benchmark-suite.md",
+        "docs/shared-benchmark-harness.md",
+        "docs/benchmark-comparison-scorecard.md",
+        "docs/audits/2026-04-09-benchmark-posture/audit-summary.md"
+      ],
+      "proof_summary": "Branch-closeout evidence is now normalized across the four repos, keeping the host-repair lane and the finish lane in the same comparison shape.",
+      "final_outcome": "comparison_matrix_published"
+    },
+    {
+      "surface_id": "swarm_automation_and_team_coordination",
+      "title": "Swarm automation and team coordination",
+      "scenario_ids": [
+        "multi_agent_closure_proof",
+        "stateful_bug_fix_trace_drift"
+      ],
+      "repository_ids": [
+        "claude_skills",
+        "runtime-shell comparator",
+        "workflow-teaching comparator",
+        "swarm-automation comparator"
+      ],
+      "evidence_status_by_repository": {
+        "claude_skills": "source_backed",
+        "runtime-shell comparator": "public_surface_only",
+        "workflow-teaching comparator": "public_surface_only",
+        "swarm-automation comparator": "public_surface_only"
+      },
+      "source_kind_by_repository": {
+        "claude_skills": "issue_or_audit_bundle",
+        "runtime-shell comparator": "public_docs",
+        "workflow-teaching comparator": "public_docs",
+        "swarm-automation comparator": "public_docs"
+      },
+      "source_url_by_repository": {
+        "claude_skills": "docs/audits/2026-04-09-benchmark-posture/audit-summary.md",
+        "runtime-shell comparator": "external-runtime-shell-source",
+        "workflow-teaching comparator": "external-workflow-teaching-source",
+        "swarm-automation comparator": "external-swarm-automation-source"
+      },
+      "commands_or_artifacts": [
+        "docs/benchmark-suite.md",
+        "docs/shared-benchmark-harness.md",
+        "docs/benchmark-comparison-scorecard.md",
+        "docs/audits/2026-04-09-benchmark-posture/audit-summary.md"
+      ],
+      "proof_summary": "Swarm automation evidence is now normalized across the four repos, keeping team-coordination proof separate from operator-shell proof.",
+      "final_outcome": "comparison_matrix_published"
+    }
+  ],
+  "scenarios": [
+    {
+      "scenario_id": "greenfield_feature_delivery_route_ux",
+      "title": "Improve first-run workflow routing so a new operator can start faster",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "greenfield_feature_delivery",
+      "source_pr": 41,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/41",
+      "merged_at": "2026-04-07T03:50:41Z",
+      "head_branch": "feat/workflow-route-first-run",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 0,
+        "user_visible_improvement": "shorter first-run route command and clearer mode explanation"
+      },
+      "required_commands": [
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- review pre-pr --base-ref origin/main --repo-root . --issue-id 40 --pr-title \"feat: improve workflow route first-run UX\"",
+        "cargo run --bin claude-skills -- git-workflow preflight --repo-root . --base-ref origin/main"
+      ],
+      "demo_doc": "docs/demo-greenfield-feature-flow.md"
+    },
+    {
+      "scenario_id": "stateful_bug_fix_trace_drift",
+      "title": "Repair memoriesv2 execution-trace ownership and surface compatibility drift",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "stateful_bug_fix",
+      "source_pr": 27,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/27",
+      "merged_at": "2026-04-06T03:48:40Z",
+      "head_branch": "feat/memoriesv2-hardening",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 0,
+        "root_cause_scope": "canonical memoriesv2 artifact ownership and compatibility drift reporting"
+      },
+      "required_commands": [
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- review pre-commit --repo-root . --format markdown",
+        "cargo run --bin claude-skills -- review pre-pr --repo-root . --base-ref origin/main --format markdown"
+      ],
+      "demo_doc": "docs/demo-stateful-bug-fix-flow.md"
+    },
+    {
+      "scenario_id": "pr_fix_windows_hosted_check",
+      "title": "Repair a real hosted Windows failure and return the PR to green",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "hosted_pr_failure_rescue",
+      "source_pr": 32,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/32",
+      "merged_at": "2026-04-06T11:49:46Z",
+      "head_branch": "feat/packaged-release-install-channel",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 1,
+        "platform_failure_repaired": "windows-latest"
+      },
+      "required_commands": [
+        "gh pr checks 32 --watch",
+        "gh run view 24029846531 --job 70076163527 --log",
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- review pre-pr --repo-root . --base-ref origin/main --format markdown"
+      ],
+      "demo_doc": "docs/demo-pr-fix-flow.md"
+    },
+    {
+      "scenario_id": "branch_closeout_release_docs",
+      "title": "Carry a scoped feature branch from synced main to hosted-green merge closeout",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "branch_closeout",
+      "source_pr": 33,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/33",
+      "merged_at": "2026-04-06T13:02:40Z",
+      "head_branch": "feat/comparison-and-release-docs",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 0,
+        "closeout_path": "branch -> PR -> hosted green -> merge"
+      },
+      "required_commands": [
+        "git checkout main",
+        "git pull --ff-only origin main",
+        "git checkout -b feat/comparison-and-release-docs",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- review pre-pr --repo-root . --base-ref origin/main --format markdown",
+        "gh pr create --base main --head feat/comparison-and-release-docs --title 'docs(release): add comparison and release note surfaces'",
+        "gh pr checks 33 --watch"
+      ],
+      "demo_doc": "docs/demo-branch-closeout-flow.md"
+    },
+    {
+      "scenario_id": "multi_agent_closure_proof",
+      "title": "Accept hosted reviewer proof for closure without a fake reviewer lane",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "multi_agent_coordination",
+      "source_pr": 38,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/38",
+      "merged_at": "2026-04-07T02:14:24Z",
+      "head_branch": "fix/reviewer-closure-proof",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 0,
+        "closure_guard": "hosted or native reviewer proof in the execution trace now satisfies closure"
+      },
+      "required_commands": [
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- memory completion-gate check --workspace-root . --workstream-key feat-workflow-start-defaults --require-closure-ready",
+        "cargo run --bin claude-skills -- review pre-pr --repo-root . --base-ref origin/main --format markdown",
+        "cargo run --bin claude-skills -- git-workflow preflight --repo-root . --base-ref origin/main"
+      ],
+      "demo_doc": "docs/demo-multi-agent-closure-flow.md"
+    },
+    {
+      "scenario_id": "windows_validation_recovery_stable_checkout",
+      "title": "Stabilize hosted validation checkout behavior across slow matrix lanes",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "windows_validation_recovery",
+      "source_pr": 36,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/36",
+      "merged_at": "2026-04-07T00:57:25Z",
+      "head_branch": "fix/validate-stable-checkout",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 0,
+        "checkout_hardening": "stable commit SHA refs with fetch-depth 0"
+      },
+      "required_commands": [
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- review pre-pr --repo-root . --base-ref origin/main --format compact",
+        "cargo run --bin claude-skills -- git-workflow preflight --repo-root . --base-ref origin/main --format compact"
+      ],
+      "demo_doc": "docs/demo-windows-validation-recovery-flow.md"
+    },
+    {
+      "scenario_id": "docs_governance_first_success_path",
+      "title": "Publish a first-success operator guide and wire it into the main workflow surfaces",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "docs_governance_change",
+      "source_pr": 43,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/43",
+      "merged_at": "2026-04-07T04:13:09Z",
+      "head_branch": "feat/workflow-first-success-path",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 0,
+        "docs_surface": "README and WORKFLOW now point to a guided first-success path"
+      },
+      "required_commands": [
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- review pre-pr --base-ref origin/main --repo-root . --issue-id 42 --pr-title \"docs: add workflow first-success path\"",
+        "cargo run --bin claude-skills -- git-workflow preflight --repo-root . --base-ref origin/main"
+      ],
+      "demo_doc": "docs/demo-docs-governance-flow.md"
+    },
+    {
+      "scenario_id": "regression_hardening_autopilot_defaults",
+      "title": "Default bare workflow start to autopilot standard and harden the regression guard",
+      "style_targets": ["runtime-shell comparator", "workflow-teaching comparator"],
+      "category": "regression_hardening",
+      "source_pr": 45,
+      "source_url": "https://github.com/UntaDotMy/claude_skills/pull/45",
+      "merged_at": "2026-04-07T04:53:36Z",
+      "head_branch": "feat/workflow-start-autopilot-defaults",
+      "final_outcome": "merged_green",
+      "success_metrics": {
+        "local_validation_passed": true,
+        "hosted_checks_total": 6,
+        "hosted_checks_passed": 6,
+        "fix_commits": 1,
+        "regression_guard": "workflow start defaults are covered by direct app tests and benchmark-facing contract tests"
+      },
+      "required_commands": [
+        "cargo test --workspace",
+        "cargo test --workspace",
+        "cargo run --bin claude-skills -- git-workflow preflight --repo-root . --base-ref origin/main"
+      ],
+      "demo_doc": "docs/demo-regression-hardening-flow.md"
+    }
+  ]
+}

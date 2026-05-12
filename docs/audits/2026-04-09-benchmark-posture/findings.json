@@ -1,0 +1,16 @@
+[
+  {
+    "id": "benchmark-audit-bundle-missing",
+    "title": "Benchmark posture did not yet have a published audit bundle artifact",
+    "severity": "medium",
+    "status": "closed",
+    "resolution": "Published the benchmark posture audit bundle and linked it from the benchmark trust surfaces."
+  },
+  {
+    "id": "benchmark-posture-links-missing",
+    "title": "Benchmark trust docs and contract tests did not point to one durable benchmark posture audit artifact",
+    "severity": "medium",
+    "status": "closed",
+    "resolution": "Aligned README, benchmark docs, todo, and contract tests to the published benchmark posture audit bundle."
+  }
+]

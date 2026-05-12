@@ -1,0 +1,49 @@
+#
+# Purpose: Keep local-only workspace, editor, build, and scratch artifacts out of commits.
+# Caller: Git status, add, and review workflows for this repository.
+# Dependencies: Git ignore pattern matching and repository-local scratch conventions.
+# Main Functions: Ignore generated outputs, local settings, logs, and planning scratch files.
+# Side Effects: Hides matching untracked local files from normal Git status and add flows.
+#
+# Local workspace settings
+.codex/*
+.claude/
+
+# Editor folders
+.idea/
+.vscode/
+
+# Native build artifacts
+bin/
+dist/
+coverage.out
+*.test
+/codex-skills
+/codex-skills.exe
+
+# Rust build artifacts
+/target/
+# Cargo.lock is committed for reproducible binary builds per Cargo convention.
+
+# Local assistant settings
+.*/settings.local.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temp, patch, and log files
+/.codex_tmp*
+/.gh-*.log
+*.log
+*.tmp
+*-cover.out
+/$cover
+*.bak
+*.swp
+*.orig
+*.rej
+
+# Local planning scratch files
+plan.md
+todo.local.md

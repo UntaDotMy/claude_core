@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can push deeper on release-gate testing and regression strategy without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "QA & Automation Engineer"
+  short_description: "Implementation-heavy QA, automation, and release reliability guidance"
+  default_prompt: "Use $qa-and-automation-engineer when the main risk is reproduction quality, harness design, regression coverage, flake isolation, runtime validation, or release gating. Start from a working brief, define the failing signal, and prefer the smallest test set that can prove the change and catch the next adjacent regression. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true

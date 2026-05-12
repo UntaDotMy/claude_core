@@ -1,0 +1,40 @@
+  help [advanced]
+  version [--json]
+  platform [--json]
+  bootstrap-info [--json] [--claude-home <path>] [--repository-slug <owner/repo>] [--repo-root <path>] [--version <build-version>]
+  all [--repo-root <path>] [--claude-home <path>] [--profile full|smoke]
+  install [--repo-root <path>] [--claude-home <path>]
+  update [--repo-root <path>] [--claude-home <path>]
+  status [--repo-root <path>] [--claude-home <path>]
+  doctor [--repo-root <path>] [--claude-home <path>]
+  validate [--repo-root <path>] [--profile full|smoke]
+  verify [--repo-root <path>] [--claude-home <path>] [<skill-name>]
+  uninstall [--repo-root <path>] [--claude-home <path>]
+  menu
+  review init|diff|pre-commit|pre-pr [--repo-root <path>] [--format json|markdown|compact]
+  review gates check [--repo-root <path>] [--surface <name>] [--repo-test-policy skip|run] [--format json|markdown|compact]
+  review hosted check|comment [--repo-root <path>] [--provider <name>] [--write-payload-file <path>] [--write-body-file <path>] [--format json|markdown|compact]
+  review policy show [--format json|markdown|compact]
+  git-workflow preflight [--repo-root <path>] [--base-ref <ref>]
+  git-workflow commit-message --from-diff [--repo-root <path>] [--base-ref <ref>] [--test-result <text>] [--format json|markdown|compact]
+  git-workflow pr-body --from-diff [--repo-root <path>] [--base-ref <ref>] [--test-result <text>] [--format json|markdown|compact]
+  git-workflow lint-message [--allow-codex-wording] [--format json|markdown|compact] <file>
+  run [--recovery-dir <path>] [--json] [--stream] -- <command...>
+  rewrite "<command>"
+  hook install|uninstall|list|show|instructions
+  code-search search --workspace-root <path> --query <text> [--format json|compact]
+  code-search index|status
+  design-intelligence recommend [request...]
+  memory scope resolve [--memory-base <path>] [--workspace-root <path>] [--create-missing] [--refresh-system-map] [--format json|compact]
+  memory system-map refresh [--memory-base <path>] [--workspace-root <path>] [--format json|compact]
+  memory status|report|working-brief|completion-gate|agent-registry|research-cache|maintenance|agent-packets|loop-guard|retrieve|index|entity|hook
+  memoriesv2 scope resolve [same flags as memory scope resolve]
+  memoriesv2 status|report|working-brief|completion-gate|agent-registry|research-cache|maintenance|agent-packets|loop-guard|retrieve|index|entity|hook
+  orchestration route-plan|task|start-run|finish-run|runtime-preflight|resume-status|checkpoint|trace
+  workflow start|resume|await|shutdown|finish|status|cockpit|dashboard|watch|route|guide|first-run|setup|guided-setup|branch
+  gain [reset]
+  session [--since today|7d|30d|all] [--json]
+  bench [--fixtures] [--exact] [--json] [--compare raw]
+  flow start --target-file <path> [--target-function <name>] [--repo-root <path>] [--output <path>] [--json]
+  flow check [--repo-root <path>] [--artifact <path>] [--json]
+  flow finish [--repo-root <path>] [--artifact <path>] [--json]

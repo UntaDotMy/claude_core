@@ -1,0 +1,9 @@
+{
+  "bundle_id": "2026-04-11-memory-recall-benchmark",
+  "bundle_type": "memory_recall_benchmark",
+  "generated_at": "2026-04-11T00:00:00Z",
+  "summary_path": "docs/audits/2026-04-11-memory-recall-benchmark/audit-summary.md",
+  "findings_path": "docs/audits/2026-04-11-memory-recall-benchmark/findings.json",
+  "regression_proof_path": "docs/audits/2026-04-11-memory-recall-benchmark/regression-proof.md",
+  "remediation_map_path": "docs/audits/2026-04-11-memory-recall-benchmark/remediation-map.md"
+}

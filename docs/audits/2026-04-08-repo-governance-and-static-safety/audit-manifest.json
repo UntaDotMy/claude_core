@@ -1,0 +1,19 @@
+{
+  "repository_slug": "UntaDotMy/claude_skills",
+  "audited_revision": "5e0bcb33f20ba626ca3e32657ae6f1c8350b9b2c",
+  "generated_at": "2026-04-08",
+  "auditor": "Codex CLI repository audit bundle",
+  "scope": [
+    "governance posture",
+    "trust-artifact posture",
+    "native CLI compatibility",
+    "static-safety evidence"
+  ],
+  "files": [
+    "docs/audits/2026-04-08-repo-governance-and-static-safety/audit-summary.md",
+    "docs/audits/2026-04-08-repo-governance-and-static-safety/findings.json",
+    "docs/audits/2026-04-08-repo-governance-and-static-safety/remediation-map.md",
+    "docs/audits/2026-04-08-repo-governance-and-static-safety/regression-proof.md",
+    "docs/audits/2026-04-08-repo-governance-and-static-safety/audit-manifest.json"
+  ]
+}

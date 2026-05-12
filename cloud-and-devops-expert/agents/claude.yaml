@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can push deeper on rollout, CI, and operability risk without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "Cloud & DevOps Expert"
+  short_description: "Cloud implementation, CI/CD, operability, and rollout guidance"
+  default_prompt: "Use $cloud-and-devops-expert when the main risk is infrastructure design, CI/CD, secrets, rollout control, rollback safety, or operations readiness. Start from a working brief, name boundaries and failure modes, and prefer reproducible changes with observability. For rollout work, name the alpha, beta, canary, release, or blue-green stage, the traffic-shift method, load-balancer behavior, rollback trigger, rollback owner, abort signal, evidence gate, and red-team versus blue-team checks. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true

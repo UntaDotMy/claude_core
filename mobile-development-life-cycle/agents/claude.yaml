@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can push deeper on mobile lifecycle and release risk without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "Mobile Development Life Cycle"
+  short_description: "Mobile implementation, lifecycle quality, and release guidance"
+  default_prompt: "Use $mobile-development-life-cycle when the main risk is lifecycle behavior, permissions, offline sync, device-only regressions, crash evidence, or staged mobile release safety. Start from a working brief, identify the target platform and reproduction matrix, and choose the smallest change that preserves device validation and rollback options. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true

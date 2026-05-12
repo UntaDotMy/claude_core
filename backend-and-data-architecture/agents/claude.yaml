@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can push deeper on backend contracts and data-risk analysis without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "Backend & Data Architecture"
+  short_description: "Backend implementation, contracts, data safety, and rollout guidance"
+  default_prompt: "Use $backend-and-data-architecture when the main risk is API contracts, data modeling, migrations, idempotency, retries, queues, caching, or service boundaries. Start from a working brief, name the contract and failure modes, and choose the smallest rollout-safe design that preserves observability. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true

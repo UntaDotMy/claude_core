@@ -1,0 +1,23 @@
+[
+  {
+    "id": "audit-bundle-missing",
+    "title": "Current governance and static-safety audit bundle was not yet published",
+    "severity": "medium",
+    "status": "closed",
+    "resolution": "Published the current audit bundle and linked it from the security audit status page."
+  },
+  {
+    "id": "legacy-memory-command-friction",
+    "title": "Legacy memory command forms failed instead of mapping to the current native CLI surface",
+    "severity": "medium",
+    "status": "closed",
+    "resolution": "Added compatibility aliases for working-brief save, validation-plan, and completion-gate upsert with regression tests."
+  },
+  {
+    "id": "legacy-task-lifecycle-flag-friction",
+    "title": "Legacy orchestration task flags and complete-phase wording failed instead of resolving to the current lifecycle model",
+    "severity": "medium",
+    "status": "closed",
+    "resolution": "Added lifecycle flag aliases, implicit task and requirement identifier derivation, and complete-phase normalization with regression tests."
+  }
+]

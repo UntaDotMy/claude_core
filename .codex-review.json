@@ -1,0 +1,155 @@
+{
+  "version": 1,
+  "default_base_ref": "@{upstream}",
+  "policy": {
+    "configured_surfaces": [
+      "diff",
+      "pre-commit",
+      "pre-pr",
+      "pr"
+    ],
+    "hosted_providers": [
+      "generic",
+      "github"
+    ],
+    "github_hosted_opt_in_only": true,
+    "default_local_flow": [
+      "Implement the change.",
+      "Before writing non-trivial code, run a targeted research pass for the active language, framework, runtime, and harness so syntax, release changes, tooling behavior, and repository conventions are current instead of assumed from memory.",
+      "Verify the relevant language, framework, runtime, and tooling release notes, syntax changes, validation behavior, and repository harness conventions before coding.",
+      "Run repo-wide unit proof before the final gate; for this Rust repo use cargo test --workspace.",
+      "Run the mandatory release test ladder in order for every applicable rung: Smoke testing -> Functional testing -> Integration testing -> UI testing -> Load testing -> Stress testing -> Security testing. If any required rung fails, remains blocked, or is skipped without a justified not-applicable reason, the change is no-go.",
+      "Run native review for {test_policy_summary}.",
+      "Re-read the overall impacted implementation surface, not only the just-edited lines, before the final gate.",
+      "Re-audit the finished change against the working brief user story, PRD or spec when one exists, explicit tasks, active plan items, completion-gate requirements, required lanes, and closure proof before calling the task done.",
+      "Do not close the current job scope until it is 100% complete for that scope; for phased delivery finish and re-audit the current layer before advancing to the next one.",
+      "For non-trivial bugs, define the behavior mismatch, trace the source-of-truth and override paths across startup, runtime, and recovery boundaries, and only then accept the fix.",
+      "If a visible fixable in-scope flaw is found during validation or review, fix it before handoff instead of turning it into a next-step suggestion.",
+      "Generate host-neutral review artifacts when CI or another forge needs review output; reserve GitHub publishing for explicit GitHub workflows.",
+      "When hosted PR checks exist, wait at least 20 seconds after opening or updating the PR so the hosted lanes have time to appear, then inspect whether they are pending, running, passing, or failing and keep watching if hosted state is still unresolved.",
+      "When hosted PR checks exist, watch them to terminal state, inspect failing logs, fix the root cause on the same branch, and rerun until the PR is green instead of treating local proof as final.",
+      "Do not stop at the first failing validation, review, or hosted-check result when the issue is fixable in scope; keep iterating until the failure is resolved or a real blocker is documented.",
+      "Do not present work as complete while a required validation command, hosted check, or other dependent process is still running, failing, or unresolved.",
+      "Keep the reviewer lane for broader semantic validation.",
+      "After implementation and repo-wide proof, run a second reviewer-quality pass before final delivery."
+    ],
+    "semantic_checklist_prelude": [
+      "Trace architecture impact and unintended coupling after the native gate passes.",
+      "Confirm the finished change still matches the working brief user story, explicit tasks, and broader impacted implementation surface.",
+      "Confirm the finished change still matches the working brief user story, PRD or spec when one exists, explicit tasks, active plan items, and broader impacted implementation surface.",
+      "Confirm the current phase or priority layer is fully complete before advancing, such as P0 before P1 and P1 before P2.",
+      "Confirm the scoped job is 100% complete for the active layer before advancing or closing, not just partially green.",
+      "Confirm every applicable rung in the mandatory test ladder passed in order, and no required rung is being waived without explicit justification.",
+      "Confirm the fix changes the authoritative owner or transition contract, not only one suspicious consumer branch.",
+      "Confirm the workflow memory writes land in the writable second-layer memoriesv2 store, not only in transient chat context."
+    ]
+  },
+  "rules": [
+    {
+      "id": "native-rust-changes-need-test-evidence",
+      "description": "Native Rust behavior changes should carry direct test evidence before merge.",
+      "type": "test_evidence",
+      "gate": "block",
+      "severity": "high",
+      "match_paths": [
+        "rust/**/*.rs"
+      ],
+      "exclude_paths": [],
+      "test_policy": "deterministic",
+      "reviewer_checklist": "Review edge cases, failure paths, and regression depth that native evidence alone may not fully prove.",
+      "message": "Native Rust changes need deterministic regression evidence before merge."
+    },
+    {
+      "id": "skill-governance-changes-need-contract-coverage",
+      "description": "Skill-pack governance and prompt changes should update contract coverage so reviewer and workflow guidance do not drift.",
+      "type": "path_pair_required",
+      "gate": "block",
+      "severity": "high",
+      "match_paths": [
+        "AGENTS.md",
+        "README.md",
+        "backend-and-data-architecture/**",
+        "cloud-and-devops-expert/**",
+        "git-expert/**",
+        "memory-status-reporter/**",
+        "mobile-development-life-cycle/**",
+        "qa-and-automation-engineer/**",
+        "reviewer/**",
+        "security-and-compliance-auditor/**",
+        "software-development-life-cycle/**",
+        "ui-design-systems-and-responsive-interfaces/**",
+        "ux-research-and-experience-strategy/**",
+        "web-development-life-cycle/**"
+      ],
+      "required_changed_path_patterns": [
+        "rust/**/*.rs",
+        "docs/**/*.md"
+      ],
+      "reviewer_checklist": "Review edge cases, failure paths, and regression depth that native evidence alone may not fully prove.",
+      "message": "Governance and prompt changes need Rust validation updates before merge."
+    },
+    {
+      "id": "workflow-changes-need-regression-coverage",
+      "description": "Workflow and release automation changes should bring direct regression coverage before merge.",
+      "type": "path_pair_required",
+      "gate": "block",
+      "severity": "high",
+      "match_paths": [
+        ".github/workflows/**",
+        "rust/crates/claude-skills/src/manager.rs"
+      ],
+      "required_changed_path_patterns": [
+        "rust/**/*.rs",
+        ".github/workflows/**"
+      ],
+      "reviewer_checklist": "Review edge cases, failure paths, and regression depth that native evidence alone may not fully prove.",
+      "message": "Workflow and release-entry changes need direct regression coverage before merge."
+    },
+    {
+      "id": "linked-repository-consumer-scan",
+      "description": "Linked repositories should be scanned before merge when changed surfaces may impact downstream consumers.",
+      "type": "linked_repo_scan",
+      "gate": "block",
+      "severity": "medium",
+      "match_paths": [
+        "rust/**/*.rs",
+        "reviewer/**",
+        "software-development-life-cycle/**"
+      ],
+      "exclude_paths": [],
+      "reviewer_checklist": "Trace downstream and cross-repository impact beyond filename matches before release.",
+      "message": "Linked repositories reference the changed surface; verify compatibility before merge."
+    },
+    {
+      "id": "existing-source-changes-need-flow-check",
+      "description": "Existing source-file edits should include preserve-existing-flow owner-path evidence.",
+      "type": "flow_check_required",
+      "gate": "block",
+      "severity": "high",
+      "match_paths": [
+        "rust/**/*.rs"
+      ],
+      "exclude_paths": [],
+      "reviewer_checklist": "Verify the entry point, producer, source of truth, storage or queue owner, side-effect owner, consumers, cleanup or recovery path, edit boundary, and validation evidence before approving existing-source edits.",
+      "message": "Existing source changes need preserve-existing-flow evidence before merge."
+    },
+    {
+      "id": "reject-workaround-markers",
+      "description": "Changed comments should not normalize workaround-only delivery or temporary hacks.",
+      "type": "forbidden_pattern",
+      "gate": "block",
+      "severity": "medium",
+      "match_paths": [
+        "rust/**/*.rs"
+      ],
+      "forbidden_patterns": [
+        "(?i)\\b(?:workaround|temporary hack|quick fix|hacky)\\b",
+        "(?i)\\b(?:todo|fixme)\\b"
+      ],
+      "reviewer_checklist": "Reject duplicate logic, workaround-only fixes, shortform identifiers, and style drift beyond deterministic rules.",
+      "comments_only": true,
+      "message": "Changed comments should not introduce workaround-only or temporary-hack markers."
+    }
+  ],
+  "linked_repositories": []
+}

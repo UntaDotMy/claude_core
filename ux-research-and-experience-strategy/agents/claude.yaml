@@ -1,0 +1,9 @@
+# Reasoning: Use the repo-managed high reasoning baseline so this skill
+# can push deeper on UX evidence and recovery-path risk without a model pin.
+reasoning_effort: "high"
+interface:
+  display_name: "UX Research and Experience Strategy"
+  short_description: "Analysis-first UX research, usability, and experience strategy guidance"
+  default_prompt: "Use $ux-research-and-experience-strategy when the main problem is journey friction, weak recovery, or decision architecture. Start from a working brief and build an experience brief with success signals. Benchmark 2-3 mature flows, keep brownfield changes targeted, reject hardcoded assumptions, and pair it with usability checks, previews, or experiment plans. If UI is also involved, UX owns user story, journey, friction, evidence, and validation; UI owns visual translation. Shared execution policy is appended from the central managed catalog during install."
+policy:
+  allow_implicit_invocation: true
