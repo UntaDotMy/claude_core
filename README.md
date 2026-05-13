@@ -5,7 +5,7 @@ Dependencies: Native CLI commands, workflow docs, memory surfaces, review gates,
 Main Functions: Explain what to run first, where to find each surface, and how closure proof works.
 Side Effects: Sets contributor and operator expectations for the repo-managed native experience.
 -->
-[![Validate](https://github.com/UntaDotMy/claude_skills/actions/workflows/validate.yml/badge.svg)](https://github.com/UntaDotMy/claude_skills/actions/workflows/validate.yml)
+[![Validate](https://github.com/UntaDotMy/claude_core/actions/workflows/validate.yml/badge.svg)](https://github.com/UntaDotMy/claude_core/actions/workflows/validate.yml)
 
 # claude_skills
 
@@ -80,22 +80,22 @@ Use `claude_skills` when the team needs delivery work to be easier to inspect an
 macOS or Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.sh | bash
 ~/.claude/claude-skills status
 ```
 
 Windows PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.ps1 | iex
-& "$env:USERPROFILE\.claude\claude-skills.exe" status
+irm https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.ps1 | iex
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
 ```
 
 Windows CMD:
 
 ```bat
-curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.cmd -o install.cmd && install.cmd && del install.cmd
-%USERPROFILE%\.claude\claude-skills.exe status
+curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.cmd -o install.cmd && install.cmd && del install.cmd
+%USERPROFILE%\.claude-skills\claude-skills.exe status
 ```
 
 The bootstrap installer detects your OS and architecture, downloads the matching GitHub release archive into a temporary directory, extracts it, runs `claude-skills install`, verifies `status`, and deletes the temporary files. Set `CLAUDE_SKILLS_VERSION=vX.Y.Z` to install a specific release instead of the latest release.
@@ -107,8 +107,8 @@ Download the archive for your OS from GitHub Releases, extract it, open a termin
 ### Contributors: install from source
 
 ```bash
-git clone https://github.com/UntaDotMy/claude_skills.git
-cd claude_skills
+git clone https://github.com/UntaDotMy/claude_core.git
+cd claude_core
 cargo run --bin claude-skills -- install
 cargo run --bin claude-skills -- status
 ```
