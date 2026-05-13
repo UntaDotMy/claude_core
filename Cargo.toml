@@ -7,7 +7,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.80"
 license = "MIT"
-repository = "https://github.com/UntaDotMy/claude_skills"
+repository = "https://github.com/UntaDotMy/claude_core"
 
 [workspace.dependencies]
 claude-skills-platform = { path = "rust/crates/claude-skills-platform" }
