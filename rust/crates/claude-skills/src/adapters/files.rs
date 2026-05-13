@@ -133,6 +133,7 @@ mod tests {
         assert!(!result.stdout.contains("src/lib.rs'"));
     }
 
+    #[allow(dead_code)]
     fn meta(command: &str, stdout_bytes: usize) -> RunMeta {
         RunMeta {
             raw_id: "raw".to_string(),

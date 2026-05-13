@@ -6,6 +6,7 @@
 
 pub mod build;
 pub mod common;
+pub mod containers;
 pub mod files;
 pub mod generic;
 pub mod git;
