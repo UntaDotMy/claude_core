@@ -88,14 +88,14 @@ Windows PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.ps1 | iex
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
+& "$env:USERPROFILE\.claude\claude-skills.exe" status
 ```
 
 Windows CMD:
 
 ```bat
 curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.cmd -o install.cmd && install.cmd && del install.cmd
-%USERPROFILE%\.claude-skills\claude-skills.exe status
+%USERPROFILE%\.claude\claude-skills.exe status
 ```
 
 The bootstrap installer detects your OS and architecture, downloads the matching GitHub release archive into a temporary directory, extracts it, runs `claude-skills install`, verifies `status`, and deletes the temporary files. Set `CLAUDE_SKILLS_VERSION=vX.Y.Z` to install a specific release instead of the latest release.
