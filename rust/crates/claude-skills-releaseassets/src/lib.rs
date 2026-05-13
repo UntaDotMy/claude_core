@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use claude_skills_platform::Target;
 
-pub const DEFAULT_REPOSITORY_SLUG: &str = "UntaDotMy/claude_skills";
+pub const DEFAULT_REPOSITORY_SLUG: &str = "UntaDotMy/claude_core";
 pub const BUNDLE_MANIFEST_FILE_NAME: &str = "claude-skills-release-manifest.json";
 pub const PACKAGED_RELEASE_BUNDLE_KIND: &str = "packaged_release_bundle";
 
@@ -215,11 +215,11 @@ mod tests {
     fn release_download_url_uses_default_repository_when_unset() {
         assert_eq!(
             release_download_url("", "2026.03.14.0", &linux_arm64()),
-            "https://github.com/UntaDotMy/claude_skills/releases/download/v2026.03.14.0/claude-skills_2026.03.14.0_linux_arm64.tar.gz"
+            "https://github.com/UntaDotMy/claude_core/releases/download/v2026.03.14.0/claude-skills_2026.03.14.0_linux_arm64.tar.gz"
         );
         assert_eq!(
             release_download_url("", "bootstrap-sample-release", &linux_arm64()),
-            "https://github.com/UntaDotMy/claude_skills/releases/download/bootstrap-sample-release/claude-skills_bootstrap-sample-release_linux_arm64.tar.gz"
+            "https://github.com/UntaDotMy/claude_core/releases/download/bootstrap-sample-release/claude-skills_bootstrap-sample-release_linux_arm64.tar.gz"
         );
     }
 
