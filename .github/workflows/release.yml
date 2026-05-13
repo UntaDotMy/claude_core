@@ -133,8 +133,13 @@ jobs:
           target_dir="dist/${{ matrix.os_name }}-${{ matrix.arch }}"
           mkdir -p "$target_dir"
           cp "target/${{ matrix.target }}/release/${{ matrix.executable }}" "$target_dir/"
-          cp AGENTS.md README.md "$target_dir/"
+          cp *.md "$target_dir/" || true
           cp -R docs "$target_dir/docs" || true
+          for dir in */; do
+            if [ -f "${dir}SKILL.md" ]; then
+              cp -R "$dir" "$target_dir/"
+            fi
+          done
           cat > "$target_dir/claude-skills-release-manifest.json" <<EOF
           {
             "package_kind": "packaged_release_bundle",
