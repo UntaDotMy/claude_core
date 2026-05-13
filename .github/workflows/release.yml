@@ -2,16 +2,79 @@ name: Release
 
 on:
   push:
+    branches:
+      - "main"
     tags:
       - "v*"
       - "bootstrap-*"
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to publish, for example v2026.03.15.0
+        required: true
+        type: string
+
+permissions:
+  contents: write
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
+  release-preflight:
+    name: Release preflight
+    runs-on: ubuntu-latest
+    outputs:
+      release_tag: ${{ steps.release-metadata.outputs.release_tag }}
+      build_version: ${{ steps.release-metadata.outputs.build_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve release metadata
+        id: release-metadata
+        shell: bash
+        run: |
+          normalize_release_tag() {
+            local raw=$1
+            if [[ "$raw" == v* ]]; then
+              printf '%s\n' "$raw"
+              return 0
+            fi
+            if [[ "$raw" == [0-9]* ]]; then
+              printf 'v%s\n' "$raw"
+              return 0
+            fi
+            printf '%s\n' "$raw"
+          }
+
+          if [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            release_tag="$(normalize_release_tag "${{ github.event.inputs.release_tag }}")"
+          elif [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            release_tag="$(normalize_release_tag "${GITHUB_REF_NAME}")"
+          else
+            release_tag="bootstrap-${GITHUB_SHA::12}"
+          fi
+
+          if [[ "$release_tag" == v[0-9]* ]]; then
+            build_version="${release_tag#v}"
+          else
+            build_version="$release_tag"
+          fi
+
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "build_version=$build_version" >> "$GITHUB_OUTPUT"
+
+      - name: Validate
+        run: |
+          cargo test --workspace
+          cargo fmt --all -- --check
+          cargo clippy -- -D warnings
+
   build:
     name: Build ${{ matrix.target }}
+    needs: release-preflight
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -21,26 +84,32 @@ jobs:
             os: ubuntu-latest
             os_name: linux
             arch: amd64
+            executable: claude-skills
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             os_name: linux
             arch: arm64
+            executable: claude-skills
           - target: x86_64-apple-darwin
             os: macos-latest
             os_name: darwin
             arch: amd64
+            executable: claude-skills
           - target: aarch64-apple-darwin
             os: macos-latest
             os_name: darwin
             arch: arm64
+            executable: claude-skills
           - target: x86_64-pc-windows-msvc
             os: windows-latest
             os_name: windows
             arch: amd64
+            executable: claude-skills.exe
           - target: aarch64-pc-windows-msvc
             os: windows-latest
             os_name: windows
             arch: arm64
+            executable: claude-skills.exe
 
     steps:
       - uses: actions/checkout@v4
@@ -48,49 +117,75 @@ jobs:
         with:
           target: ${{ matrix.target }}
       - name: Build
+        env:
+          CLAUDE_SKILLS_BUILD_VERSION: ${{ needs.release-preflight.outputs.build_version }}
         run: cargo build --release --target ${{ matrix.target }}
+      - name: Stage release bundle
+        shell: bash
+        run: |
+          build_version="${{ needs.release-preflight.outputs.build_version }}"
+          target_dir="dist/${{ matrix.os_name }}-${{ matrix.arch }}"
+          mkdir -p "$target_dir"
+          cp "target/${{ matrix.target }}/release/${{ matrix.executable }}" "$target_dir/"
+          cp AGENTS.md README.md "$target_dir/"
+          cp -R docs "$target_dir/docs" || true
+          cat > "$target_dir/claude-skills-release-manifest.json" <<EOF
+          {
+            "package_kind": "packaged_release_bundle",
+            "repository_slug": "${{ github.repository }}",
+            "release_tag": "${{ needs.release-preflight.outputs.release_tag }}",
+            "build_version": "${build_version}",
+            "archive_file_name": "claude-skills_${build_version}_${{ matrix.os_name }}_${{ matrix.arch }}.${{ matrix.os_name == 'windows' && 'zip' || 'tar.gz' }}"
+          }
+          EOF
       - name: Package (Unix)
         if: runner.os != 'Windows'
         run: |
-          cd target/${{ matrix.target }}/release
-          tar czf "claude-skills_${{ github.ref_name }}_${{ matrix.os_name }}_${{ matrix.arch }}.tar.gz" claude-skills
+          build_version="${{ needs.release-preflight.outputs.build_version }}"
+          cd "dist/${{ matrix.os_name }}-${{ matrix.arch }}"
+          tar czf "../claude-skills_${build_version}_${{ matrix.os_name }}_${{ matrix.arch }}.tar.gz" .
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
-          cd target/${{ matrix.target }}/release
-          Compress-Archive -Path "claude-skills.exe" -DestinationPath "claude-skills_${{ github.ref_name }}_${{ matrix.os_name }}_${{ matrix.arch }}.zip"
+          $build_version = "${{ needs.release-preflight.outputs.build_version }}"
+          $source = "dist/${{ matrix.os_name }}-${{ matrix.arch }}"
+          $dest = "dist/claude-skills_${build_version}_${{ matrix.os_name }}_${{ matrix.arch }}.zip"
+          Compress-Archive -Path "$source\*" -DestinationPath "$dest" -Force
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: claude-skills-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/claude-skills_${{ github.ref_name }}_*.tar.gz
-          if-no-files-found: ignore
-      - name: Upload artifact (Windows)
-        uses: actions/upload-artifact@v4
-        if: runner.os == 'Windows'
-        with:
-          name: claude-skills-${{ matrix.target }}-windows
-          path: target/${{ matrix.target }}/release/claude-skills_${{ github.ref_name }}_*.zip
-          if-no-files-found: ignore
+          name: release-${{ matrix.os_name }}-${{ matrix.arch }}
+          path: dist/claude-skills_${{ needs.release-preflight.outputs.build_version }}_${{ matrix.os_name }}_${{ matrix.arch }}.*
+          if-no-files-found: error
 
-  release:
-    name: Create GitHub Release
-    needs: build
+  publish:
+    name: Publish GitHub Release
+    needs:
+      - release-preflight
+      - build
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    env:
+      GH_REPO: ${{ github.repository }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - name: Download all artifacts
         uses: actions/download-artifact@v4
         with:
-          path: artifacts
+          pattern: release-*
           merge-multiple: true
-      - name: List artifacts
-        run: ls -la artifacts/
-      - name: Create Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: artifacts/*
-          generate_release_notes: true
-          fail_on_unmatched_files: false
+          path: release-assets
+      - name: Create or update GitHub release
+        shell: bash
+        run: |
+          release_tag="${{ needs.release-preflight.outputs.release_tag }}"
+          if ! gh release view "$release_tag" >/dev/null 2>&1; then
+            gh release create "$release_tag" \
+              --target "$GITHUB_SHA" \
+              --title "$release_tag" \
+              --generate-notes
+          fi
+      - name: Upload release assets
+        shell: bash
+        run: |
+          gh release upload "${{ needs.release-preflight.outputs.release_tag }}" release-assets/* --clobber
