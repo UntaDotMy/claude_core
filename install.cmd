@@ -7,7 +7,7 @@ REM Side Effects: Writes the managed claude-skills surface under %USERPROFILE%\.
 
 setlocal
 set "INSTALL_BASE=%CLAUDE_SKILLS_INSTALL_BASE%"
-if "%INSTALL_BASE%"=="" set "INSTALL_BASE=https://raw.githubusercontent.com/UntaDotMy/claude_skills/main"
+if "%INSTALL_BASE%"=="" set "INSTALL_BASE=https://raw.githubusercontent.com/UntaDotMy/claude_core/main"
 set "TEMP_SCRIPT=%TEMP%\claude-skills-install-%RANDOM%-%RANDOM%.ps1"
 
 where curl >nul 2>nul
