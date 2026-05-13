@@ -7,7 +7,7 @@ Side Effects: None; documentation only.
 -->
 # Claude Code Hook Usage
 
-The managed hook set is installed at `~/.claude/hooks.json` by the one-line installer and by `claude-skills hook install`. It manages every supported Claude Code lifecycle event: `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, and `Stop`. `PreToolUse` is the only event that blocks and reroutes noisy Bash commands because token-saving has to happen before command output exists; the other lifecycle hooks are native no-op/checkpoint surfaces for memory and recovery wiring. This page is the agent-facing contract; `claude-skills hook instructions` prints the same content (`--format markdown` is the default; `--format json` returns a structured payload).
+The managed hook set is installed at `~/.claude/settings.json` by the one-line installer and by `claude-skills hook install`. It manages every supported Claude Code lifecycle event: `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, and `Stop`. `PreToolUse` reroutes noisy Bash commands before output exists. Lifecycle hooks inject `additionalContext` reminders so Claude Code automatically sees the skill-routing, memory, flow, and review contract; `SessionStart` also creates or refreshes the workspace memory scope and `SYSTEM_MAP.md` when possible. This page is the agent-facing contract; `claude-skills hook instructions` prints the same content (`--format markdown` is the default; `--format json` returns a structured payload).
 
 ## Token-saving rule
 
@@ -19,17 +19,30 @@ The goal is to prevent noisy raw command output from entering Claude Code contex
 - Wraps the original command in `claude-skills run --` before it executes, preventing noisy output from entering context.
 - Emits command-specific semantic reducers, high-signal error/warning context, and compacted head/tail summaries for noisy or long output while recording the full raw stream under the Claude Code home raw-output recovery log.
 - Records native savings analytics for `claude-skills gain`, including command family and reducer dimensions.
+- Injects `additionalContext` at `SessionStart`, `UserPromptSubmit`, `PostToolUse`, compaction, and closeout events so Claude Code is reminded to use skills, memory, Preserve Existing Flow, workflow proof, and review gates automatically.
+- Refreshes the workspace memory scope and `SYSTEM_MAP.md` during `SessionStart` when the current working directory can be resolved.
 
 ## What the hook does not do
 
 - It does not cover `apply_patch` or other file-edit tool surfaces. Existing-source edits stay governed by Preserve Existing Flow and review gates (`~/.claude/memories/workspaces/<workspace-slug>/flow/flow-check.json`, `claude-skills review pre-pr`, `claude-skills review gates check`).
-- It does not replace flow or review gates.
+- It cannot force Claude Code to execute a tool; it injects authoritative `additionalContext` reminders and refreshes lightweight memory artifacts, while Claude Code still owns reasoning and tool selection.
+- It does not run expensive review gates automatically on every stop event; closeout hooks remind Claude Code to run the gates before claiming completion.
 
 ## Transparent Rewrite Handling
 
 When the hook intercepts a supported Bash command, it returns `permissionDecision: "allow"` with a `toolInputOverride` that wraps the command in `claude-skills run -- ...`. The execution proceeds transparently — no manual rerun is needed.
 
 Example: a raw `cargo test --workspace` is transparently rewritten to `claude-skills run -- cargo test --workspace` and the compacted output is returned directly.
+
+## Automatic lifecycle guidance
+
+Lifecycle hooks return `hookSpecificOutput.additionalContext`. Claude Code adds that text to context as a system reminder at the hook firing point:
+
+- `SessionStart`: injects the operating contract and refreshes the workspace memory scope/system map.
+- `UserPromptSubmit`: reminds Claude Code to route work through skills, consult/save memory, maintain workflow proof, and run review closeout.
+- `PostToolUse`: reminds Claude Code to update proof state after tool results and save durable facts.
+- `PreCompact`/`PostCompact`: preserve and restore workflow, memory, validation, and review continuity around compaction.
+- `Stop`/`SubagentStop`/`SessionEnd`: enforce closeout reminders before final responses or session end.
 
 ## Compaction surface hierarchy
 
