@@ -2,7 +2,7 @@
 # Caller: Windows PowerShell users running the documented one-line installer.
 # Dependencies: PowerShell, Invoke-WebRequest, Expand-Archive, and claude-skills GitHub release assets.
 # Main Functions: Detect platform, download a release archive to temp, extract it, run install, and verify status.
-# Side Effects: Writes the managed claude-skills surface under $env:USERPROFILE\.claude-skills and removes temporary download files.
+# Side Effects: Writes the managed claude-skills surface under $env:USERPROFILE\.claude and removes temporary download files.
 
 [CmdletBinding()]
 param(
@@ -14,7 +14,7 @@ Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
 
 if ([string]::IsNullOrWhiteSpace($Repository)) {
-    $Repository = "UntaDotMy/claude_skills"
+    $Repository = "UntaDotMy/claude_core"
 }
 if ([string]::IsNullOrWhiteSpace($Version)) {
     $Version = "latest"
@@ -98,7 +98,7 @@ try {
         throw "claude-skills install failed with exit code $LASTEXITCODE"
     }
 
-    $InstalledBinary = Join-Path $env:USERPROFILE ".claude-skills\claude-skills.exe"
+    $InstalledBinary = Join-Path $env:USERPROFILE ".claude\claude-skills.exe"
     if (-not (Test-Path $InstalledBinary -PathType Leaf)) {
         throw "Installed binary not found at $InstalledBinary"
     }

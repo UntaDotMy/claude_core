@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-repository="${CLAUDE_SKILLS_REPOSITORY:-UntaDotMy/claude_skills}"
+repository="${CLAUDE_SKILLS_REPOSITORY:-UntaDotMy/claude_core}"
 version="${CLAUDE_SKILLS_VERSION:-latest}"
 
 need_command() {

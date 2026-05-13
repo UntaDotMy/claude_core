@@ -19,34 +19,78 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
+            os_name: linux
+            arch: amd64
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
+            os_name: linux
+            arch: arm64
           - target: x86_64-apple-darwin
             os: macos-latest
+            os_name: darwin
+            arch: amd64
           - target: aarch64-apple-darwin
             os: macos-latest
+            os_name: darwin
+            arch: arm64
           - target: x86_64-pc-windows-msvc
             os: windows-latest
+            os_name: windows
+            arch: amd64
           - target: aarch64-pc-windows-msvc
             os: windows-latest
+            os_name: windows
+            arch: arm64
 
     steps:
       - uses: actions/checkout@v4
       - uses: actions-rust-lang/setup-rust-toolchain@v1
+        with:
+          target: ${{ matrix.target }}
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
       - name: Package (Unix)
         if: runner.os != 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          tar czf claude-skills_${{ matrix.target }}.tar.gz claude-skills
+          tar czf "claude-skills_${{ github.ref_name }}_${{ matrix.os_name }}_${{ matrix.arch }}.tar.gz" claude-skills
       - name: Package (Windows)
         if: runner.os == 'Windows'
         run: |
           cd target/${{ matrix.target }}/release
-          Compress-Archive -Path claude-skills.exe -DestinationPath claude-skills_${{ matrix.target }}.zip
+          Compress-Archive -Path "claude-skills.exe" -DestinationPath "claude-skills_${{ github.ref_name }}_${{ matrix.os_name }}_${{ matrix.arch }}.zip"
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: claude-skills-${{ matrix.target }}
-          path: target/${{ matrix.target }}/release/claude-skills*
+          path: target/${{ matrix.target }}/release/claude-skills_${{ github.ref_name }}_*.tar.gz
+          if-no-files-found: ignore
+      - name: Upload artifact (Windows)
+        uses: actions/upload-artifact@v4
+        if: runner.os == 'Windows'
+        with:
+          name: claude-skills-${{ matrix.target }}-windows
+          path: target/${{ matrix.target }}/release/claude-skills_${{ github.ref_name }}_*.zip
+          if-no-files-found: ignore
+
+  release:
+    name: Create GitHub Release
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+      - name: List artifacts
+        run: ls -la artifacts/
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
+          generate_release_notes: true
+          fail_on_unmatched_files: false
