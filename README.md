@@ -124,8 +124,8 @@ Use `--repo-root <path>` only when you intentionally run `claude-skills install`
 ```
 
 ```powershell
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" update
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" verify
+& "$env:USERPROFILE\.claude\claude-skills.exe" update
+& "$env:USERPROFILE\.claude\claude-skills.exe" verify
 & "$env:USERPROFILE\.claude\claude-skills.exe" status
 ```
 
