@@ -6,7 +6,7 @@
 
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::args::FlagSet;
 use crate::json::{write_indented, Value};
@@ -216,17 +216,17 @@ struct GateResult {
     details: Option<String>,
 }
 
-fn has_python_files(repository_root: &PathBuf) -> bool {
+fn has_python_files(repository_root: &Path) -> bool {
     let extensions = ["py", "pyx", "pxd"];
     check_for_extensions(repository_root, &extensions)
 }
 
-fn has_js_files(repository_root: &PathBuf) -> bool {
+fn has_js_files(repository_root: &Path) -> bool {
     let extensions = ["js", "jsx", "ts", "tsx", "css", "scss", "less"];
     check_for_extensions(repository_root, &extensions)
 }
 
-fn check_for_extensions(repository_root: &PathBuf, extensions: &[&str]) -> bool {
+fn check_for_extensions(repository_root: &Path, extensions: &[&str]) -> bool {
     let mut found = false;
     if let Ok(entries) = fs::read_dir(repository_root) {
         for entry in entries.flatten() {
@@ -254,7 +254,7 @@ fn check_for_extensions(repository_root: &PathBuf, extensions: &[&str]) -> bool 
     found
 }
 
-fn check_black(repository_root: &PathBuf) -> GateResult {
+fn check_black(repository_root: &Path) -> GateResult {
     // Check if black is available
     let black_check = run_command(
         "black",
@@ -285,7 +285,7 @@ fn check_black(repository_root: &PathBuf) -> GateResult {
     }
 }
 
-fn check_ruff(repository_root: &PathBuf) -> GateResult {
+fn check_ruff(repository_root: &Path) -> GateResult {
     let ruff_check = run_command(
         "ruff",
         &["check".to_string(), ".".to_string()],
@@ -315,7 +315,7 @@ fn check_ruff(repository_root: &PathBuf) -> GateResult {
     }
 }
 
-fn check_mypy(repository_root: &PathBuf) -> GateResult {
+fn check_mypy(repository_root: &Path) -> GateResult {
     let mypy_check = run_command("mypy", &[], Some(repository_root));
     match mypy_check {
         Ok(result) => GateResult {
@@ -341,7 +341,7 @@ fn check_mypy(repository_root: &PathBuf) -> GateResult {
     }
 }
 
-fn check_circular_imports(repository_root: &PathBuf) -> GateResult {
+fn check_circular_imports(repository_root: &Path) -> GateResult {
     // Try to find circular imports using Python's ast module
     let check_script = r#"
 import ast
@@ -396,7 +396,7 @@ sys.exit(0 if not circular_found else 1)
     }
 }
 
-fn check_import_safety(repository_root: &PathBuf) -> GateResult {
+fn check_import_safety(repository_root: &Path) -> GateResult {
     // Basic import safety check - verify no dangerous imports
     let check_script = r#"
 import ast
@@ -449,7 +449,7 @@ sys.exit(0)
     }
 }
 
-fn check_prettier(repository_root: &PathBuf) -> GateResult {
+fn check_prettier(repository_root: &Path) -> GateResult {
     let prettier_check = run_command(
         "npx",
         &[
@@ -653,10 +653,7 @@ fn run_review_hosted_command(
     }
     let body = hosted_body();
     if !flag_set.string_value("write-body-file").trim().is_empty() {
-        if let Err(error) = write_text(
-            &PathBuf::from(flag_set.string_value("write-body-file")),
-            &body,
-        ) {
+        if let Err(error) = write_text(Path::new(flag_set.string_value("write-body-file")), &body) {
             let _ = writeln!(standard_error, "{error}");
             return 1;
         }

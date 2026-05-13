@@ -779,19 +779,19 @@ fn install_from_paths(
     claude_home: &Path,
     publish_executable: bool,
 ) -> Result<InstallSummary, String> {
-    let layout = discover_repository_layout(&repository_root)?;
+    let layout = discover_repository_layout(repository_root)?;
     let mut stats = SyncStats::default();
-    ensure_claude_home_directories(&claude_home)?;
-    remove_stale_managed_files(&layout, &claude_home, &mut stats)?;
-    sync_root_files(&layout, &claude_home, &mut stats)?;
-    sync_skills(&layout, &claude_home, &mut stats)?;
-    sync_agents(&layout, &claude_home, &mut stats)?;
-    write_managed_config(&layout, &claude_home)?;
+    ensure_claude_home_directories(claude_home)?;
+    remove_stale_managed_files(&layout, claude_home, &mut stats)?;
+    sync_root_files(&layout, claude_home, &mut stats)?;
+    sync_skills(&layout, claude_home, &mut stats)?;
+    sync_agents(&layout, claude_home, &mut stats)?;
+    write_managed_config(&layout, claude_home)?;
     if publish_executable {
-        publish_native_executable(&claude_home, &mut stats)?;
+        publish_native_executable(claude_home, &mut stats)?;
     }
-    write_install_metadata(build_version, &layout, &claude_home)?;
-    write_inventories(&layout, &claude_home)?;
+    write_install_metadata(build_version, &layout, claude_home)?;
+    write_inventories(&layout, claude_home)?;
     Ok(InstallSummary {
         claude_home: claude_home.to_path_buf(),
         skill_count: layout.skills.len(),

@@ -51,7 +51,7 @@ impl CommandAdapter for TestAdapter {
                 compact_stdout.push_str("\n\nfailures:");
                 for line in &failure_lines {
                     compact_stdout.push('\n');
-                    compact_stdout.push_str(&line);
+                    compact_stdout.push_str(line);
                 }
             }
             let rerun = rerun_hint(&meta.program, &meta.args, &failure_lines);

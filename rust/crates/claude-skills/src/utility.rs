@@ -400,7 +400,7 @@ pub fn run_session_command(
     }
 
     // Sort by timestamp ascending
-    events.sort_by(|left, right| left.timestamp.cmp(&right.timestamp));
+    events.sort_by_key(|left| left.timestamp);
 
     // Group into sessions (30-minute gap = new session)
     let session_gap_secs: u64 = 30 * 60;
@@ -573,7 +573,7 @@ pub fn run_session_command(
             let _ = writeln!(
                 standard_output,
                 " {:<11} {:>8} {:>8} {:>8} {:>8} {:>6.1}% {:>9}",
-                format_args!("{}-{}", start_time, end_time),
+                format!("{}-{}", start_time, end_time),
                 session.commands,
                 format_count(session.tokens_saved),
                 format_count(session.tokens_before),
@@ -1106,7 +1106,7 @@ fn discover_missed_savings(min_tokens: usize, limit: usize) -> Vec<MissedSaving>
             break;
         }
     }
-    misses.sort_by(|left, right| right.tokens.cmp(&left.tokens));
+    misses.sort_by_key(|right| std::cmp::Reverse(right.tokens));
     misses.truncate(limit);
     misses
 }
