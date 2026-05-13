@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide Android, iOS, and cross-platform mobile lifecycle, quality, security, and release work.
-Caller: Codex agents handling mobile implementation, architecture, testing, performance, or release decisions.
+Caller: Claude Code agents handling mobile implementation, architecture, testing, performance, or release decisions.
 Dependencies: Platform constraints, app lifecycle rules, store requirements, validation evidence, and mobile references.
 Main Functions: Define mobile delivery heuristics, platform guidance, testing strategy, and release gates.
 Side Effects: Shapes specialist routing, mobile validation scope, and app-store readiness expectations.
@@ -53,7 +53,7 @@ You are a senior mobile engineer building production-ready Android and iOS apps.
 
 - Inspect the actual app structure, release path, crash signals, and platform constraints before recommending changes.
 - Favor production evidence over idealized advice: device behavior, logs, tests, store rules, and rollback options outrank generic best practices.
-- State runtime boundaries plainly and choose the most direct supported local workflow for the active Codex runtime.
+- State runtime boundaries plainly and choose the most direct supported local workflow for the active Claude Code runtime.
 
 ## When to Clarify First
 
@@ -370,8 +370,8 @@ When using this skill, return:
 ## Windows Environment
 
 When running commands on Windows:
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
-- Inside `codex.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
+- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands
 - Use forward slashes in paths when possible

@@ -1,13 +1,13 @@
 ---
 name: memory-status-reporter
-description: Produces human-style memory status reports from Codex memory files. Use for requests like "what did you learn today", "show memory status", "what mistakes happened and are they resolved", "how is memory growing", or "summarize what you understand about my needs."
+description: Produces human-style memory status reports from Claude Code memory files. Use for requests like "what did you learn today", "show memory status", "what mistakes happened and are they resolved", "how is memory growing", or "summarize what you understand about my needs."
 metadata:
   short-description: Human-style memory health and learning reports
 ---
 
 <!--
 Purpose: Produce human-readable memory health, learning, mistake, and user-needs reports.
-Caller: Codex agents responding to explicit memory status, learning recap, or mistake ledger requests.
+Caller: Claude Code agents responding to explicit memory status, learning recap, or mistake ledger requests.
 Dependencies: Scoped memory artifacts, rollout summaries, WAL files, and native memory report commands.
 Main Functions: Define report contracts, memory source priority, evidence handling, and guardrails.
 Side Effects: Reads memory artifacts and summarizes durable state without changing routine task memory ownership.
@@ -16,7 +16,7 @@ Side Effects: Reads memory artifacts and summarizes durable state without changi
 
 ## Purpose
 
-Turn Codex memory artifacts into a human-readable status report that feels like a check-in, not a raw dump.
+Turn Claude Code memory artifacts into a human-readable status report that feels like a check-in, not a raw dump.
 
 Use this skill only when the user explicitly wants a memory-health report, learning recap, mistake ledger, user-needs summary, or heuristic growth report. Routine durable memory, planning, progress, and closure updates belong to the main lane through the Rust-native `claude-skills memory ...` commands, which should keep the writable global second-layer store under `~/.claude/memoriesv2/` synchronized.
 
@@ -65,7 +65,7 @@ Use this skill only when the user explicitly wants a memory-health report, learn
 
 ## Use This Skill When
 
-- The user asks what Codex learned today or recently.
+- The user asks what Claude Code learned today or recently.
 - The user wants mistakes encountered, whether they were resolved, and what remains open.
 - The user wants heuristic memory-health stats such as learning capture, resolution rate, or brain growth.
 - The user wants tool-use mistakes and tool failure patterns remembered as mistakes too when those corrections are reusable.
@@ -91,25 +91,25 @@ Always produce these sections unless the user narrows the scope:
 1. Determine the reporting window. Default to today in the local timezone unless the user asks for a different period.
 2. Resolve the workspace scope first so the report can prefer agent-instance, workstream, and workspace files over broad global memory. When the scoped folders do not exist yet, create them:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory scope resolve --memory-base ~/.claude/memories --workspace-root "$PWD" --agent-role reviewer --workstream-key active-workstream --agent-instance reviewer-main --create-missing'
    })
    ```
-3. Run the native report command through the most direct supported tool surface; the example below uses `js_repl` with `codex.tool("exec_command", ...)` only for runtimes where JavaScript-side orchestration is the clearest fit:
+3. Run the native report command through the most direct supported tool surface; the example below uses `js_repl` with `claude.tool("exec_command", ...)` only for runtimes where JavaScript-side orchestration is the clearest fit:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory report --memory-base ~/.claude/memories --workspace-root "$PWD" --agent-role reviewer'
    })
    ```
 4. Before starting a new live research loop, check the shared workspace research cache:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory research-cache lookup --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --query "your research question"'
    })
    ```
 5. For a final-answer footer or quick check-in, use the compact report mode:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory report --memory-base ~/.claude/memories --workspace-root "$PWD" --format compact'
    })
    ```
@@ -120,31 +120,31 @@ Always produce these sections unless the user narrows the scope:
 11. If the user wants a broader window, use `--days 7` for a trailing seven-day view ending on the anchor date, or pair it with a specific `--date`.
 12. When the user supplies a durable correction or decision, have the main lane write it first with the maintenance helper before this skill summarizes the updated memory state:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory maintenance write-session-state --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --category decision --detail "Option B is the confirmed direction."'
    })
    ```
 13. For high-context work only, append the newest breadcrumb to the working buffer before the thread gets noisy:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory maintenance append-working-buffer --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --text "Validated the sync validator after the rollout-memory patch."'
    })
    ```
 14. For non-trivial or compaction-prone work, persist the scoped working brief and explicit task list before the thread gets noisy:
    ```javascript
-   await codex.tool("exec_command", {
-     cmd: 'claude-skills memory working-brief record-summary --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --user-story "Ship the native Codex workflow without drift." --desired-outcome "Resume the same plan after compaction." --task "Persist the working brief" --validation "working-brief show returns the brief."'
+   await claude.tool("exec_command", {
+     cmd: 'claude-skills memory working-brief record-summary --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --user-story "Ship the native Claude Code workflow without drift." --desired-outcome "Resume the same plan after compaction." --task "Persist the working brief" --validation "working-brief show returns the brief."'
    })
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory working-brief record-plan-item --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --item-id req-1 --title "Persist the working brief" --status in_progress --breakdown "Write the summary before compaction." --validation-target "working-brief show includes req-1."'
    })
    ```
 15. For non-trivial tasks that truly need tracked closure, record the scoped requirement ledger before the work gets noisy:
    ```javascript
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory completion-gate record-requirement --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main --requirement-id req-1 --text "Ship the scoped completion gate wiring." --status in_progress --evidence "Planning patch is in progress."'
    })
-   await codex.tool("exec_command", {
+   await claude.tool("exec_command", {
      cmd: 'claude-skills memory completion-gate check --memory-base ~/.claude/memories --workspace-root "$PWD" --workstream-key active-workstream --agent-instance reviewer-main'
    })
    ```
@@ -185,9 +185,9 @@ Always produce these sections unless the user narrows the scope:
 
 ## Real-World Scenarios
 
-- **Daily Delivery Check-In**: A user asks what Codex learned today, what mistakes were resolved, and whether momentum is improving; use this skill to turn raw memory into a concise status report.
+- **Daily Delivery Check-In**: A user asks what Claude Code learned today, what mistakes were resolved, and whether momentum is improving; use this skill to turn raw memory into a concise status report.
 - **Repeated Failure Pattern**: Similar tool or workflow failures keep resurfacing; use this skill to surface the mistake trail, current resolution state, and the prevention pattern future runs should follow.
-- **Preference Recall Audit**: A user wants confirmation that Codex still remembers their working style, validation expectations, and recurring project constraints; use this skill to summarize those remembered needs without inventing new ones.
+- **Preference Recall Audit**: A user wants confirmation that Claude Code still remembers their working style, validation expectations, and recurring project constraints; use this skill to summarize those remembered needs without inventing new ones.
 
 ## References
 

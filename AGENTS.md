@@ -1,6 +1,6 @@
 <!--
-Purpose: Define the managed Codex routing, memory, validation, and delivery rules for this skill pack.
-Caller: Codex agents using the synced claude_skills native guidance surface.
+Purpose: Define the managed Claude Code routing, memory, validation, and delivery rules for this skill pack.
+Caller: Claude Code agents using the synced claude_skills native guidance surface.
 Dependencies: Native memory scope, orchestration, workflow, review, and manager policy surfaces.
 Main Functions: Route skills, enforce lifecycle loops, and keep startup or closeout behavior deterministic.
 Side Effects: Changes the installed prompt surface and contributor expectations for this repository.
@@ -9,13 +9,13 @@ Side Effects: Changes the installed prompt surface and contributor expectations 
 
 ## Purpose
 
-This file provides guidance for Codex CLI on skill routing, native command usage, memory, validation, and delivery discipline.
+This file provides guidance for Claude Code CLI on skill routing, native command usage, memory, validation, and delivery discipline.
 
 ## Native Command Routing — Must Follow First
 
 When a native `claude-skills` command owns the job, use it instead of recreating the behavior with raw shell, generic search, or ad hoc instructions.
 
-**Token-saving rule:** the goal is to prevent noisy raw command output from entering Codex context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or rely on the hook's transparent rewrite before noisy output is produced.
+**Token-saving rule:** the goal is to prevent noisy raw command output from entering Claude Code context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or rely on the hook's transparent rewrite before noisy output is produced.
 
 **Before noisy shell commands:**
 - Prefer `claude-skills run -- <command>` for test, build, lint, log, status, search, Docker, Kubernetes, Terraform, package-manager, and CI-style commands.
@@ -90,14 +90,14 @@ Do not re-run the original raw command unless the wrapper itself fails for a rea
 
 - **Level 1 — Direct native wrapper:** `claude-skills run -- <command>` is the most reliable transparent surface; it owns command execution, shell-aware parser/rewrite support, command-specific semantic reducers, high-signal error/warning extraction, noisy-output head/tail compaction, raw-output recovery, and native savings analytics in one step. Use `claude-skills run --stream -- <command>` only when bounded live progress is needed.
 - **Level 2 — Rewrite helper:** `claude-skills rewrite "<command>"` returns the resolved wrapper for inspection or scripting. It recognizes common shell wrappers, environment prefixes, and pipelines, and routes shell syntax through `bash -lc`.
-- **Level 3 — Hook guidance:** `claude-skills hook install` registers native Codex lifecycle hooks for `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, and `Stop` in `~/.claude/hooks.json`. `PreToolUse` owns token-saving interception because it must run before noisy Bash output exists; the other lifecycle hooks are native no-op/checkpoint surfaces for memory and recovery wiring. The hook may return `permissionDecision: "allow"` with a `toolInputOverride` that transparently wraps the command (not a block-and-rerun).
-- **Level 4 — Native install/update:** Use the installed Rust binary directly (`~/.claude/claude-skills` or `%USERPROFILE%\.codex\claude-skills.exe`) for update, verify, status, hooks, and compaction. Shell and PowerShell wrapper launchers are not supported runtime entrypoints.
+- **Level 3 — Hook guidance:** `claude-skills hook install` registers native Claude Code lifecycle hooks for `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, and `Stop` in `~/.claude/hooks.json`. `PreToolUse` owns token-saving interception because it must run before noisy Bash output exists; the other lifecycle hooks are native no-op/checkpoint surfaces for memory and recovery wiring. The hook may return `permissionDecision: "allow"` with a `toolInputOverride` that transparently wraps the command (not a block-and-rerun).
+- **Level 4 — Native install/update:** Use the installed Rust binary directly (`~/.claude/claude-skills` or `%USERPROFILE%.claude-skills\claude-skills.exe`) for update, verify, status, hooks, and compaction. Shell and PowerShell wrapper launchers are not supported runtime entrypoints.
 
 For agent-facing instructions, `claude-skills hook instructions` prints the same usage contract in `markdown` (default) or `--format json`. The same contract is also tracked in [`docs/hook-usage.md`](docs/hook-usage.md).
 
 ## Token Optimization (Native Command Compaction)
 
-claude_skills includes native command output compaction to reduce wasted CLI-output context on common development commands, benchmarked against external output-reduction and context-efficiency patterns without naming those tools in the managed prompt surface. External tools remain feature benchmarks, not runtime dependencies. The default implementation stays native because it is integrated with Codex hooks, flow, review, install/update, repository instructions, raw-output recovery, and persisted `gain` analytics. It can help users fit more useful work into the same Codex usage window; it does not increase OpenAI/Codex hard usage limits or bypass rate limits.
+claude_skills includes native command output compaction to reduce wasted CLI-output context on common development commands, benchmarked against external output-reduction and context-efficiency patterns without naming those tools in the managed prompt surface. External tools remain feature benchmarks, not runtime dependencies. The default implementation stays native because it is integrated with Claude Code hooks, flow, review, install/update, repository instructions, raw-output recovery, and persisted `gain` analytics. It can help users fit more useful work into the same Claude Code usage window; it does not increase hard usage limits or bypass rate limits.
 
 ### Auto-Install Hook
 
@@ -136,7 +136,7 @@ claude-skills rewrite "cargo test --workspace"
 
 ### Token Savings Analytics
 
-`gain` reads the Rust-native compaction event log from the Codex home and reports observed commands, compacted commands, saved bytes, savings percentage, and top commands:
+`gain` reads the Rust-native compaction event log from the Claude Code home and reports observed commands, compacted commands, saved bytes, savings percentage, and top commands:
 
 ```bash
 claude-skills gain              # Show all-time dashboard
@@ -194,7 +194,7 @@ Load specialist skills when the task clearly requires domain expertise:
 - Use single skill when sufficient
 - Don't route to `reviewer` as reflex triage when a primary domain skill or focused local path already fits
 - For simple docs-only changes, use native or local validation unless risk, scope, or the user explicitly requires review
-- Let Codex CLI's native capabilities handle basic operations
+- Let Claude Code CLI's native capabilities handle basic operations
 
 ## Skill-Focused Execution
 
@@ -205,7 +205,7 @@ Load specialist skills when the task clearly requires domain expertise:
 
 ### Agent Profiles
 
-Your managed Codex home should expose these 13 skill-owned agent profiles under `~/.claude/agent-profiles/*.toml`:
+Your managed Claude Code home should expose these 13 skill-owned agent profiles under `~/.claude/agent-profiles/*.toml`:
 
 - **backend-and-data-architecture**: Backend systems, APIs, data models, caching, and messaging
 - **cloud-and-devops-expert**: Infrastructure, CI/CD, containers, and IaC
@@ -221,7 +221,7 @@ Your managed Codex home should expose these 13 skill-owned agent profiles under 
 - **ux-research-and-experience-strategy**: Research planning, usability evidence, and experience strategy
 - **web-development-life-cycle**: Web app architecture, browser behavior, performance, SEO, and deployment
 
-The old generic `default`, `explorer`, `worker`, `architect`, and `awaiter` TOMLs are not the repo-managed profile surface anymore. Runtime helper roles may still exist inside Codex, but the managed install should mirror these 13 specialist skill profiles instead.
+The old generic `default`, `explorer`, `worker`, `architect`, and `awaiter` TOMLs are not the repo-managed profile surface anymore. Runtime helper roles may still exist inside Claude Code, but the managed install should mirror these 13 specialist skill profiles instead.
 
 ## Execution Strategy
 
@@ -251,7 +251,7 @@ The old generic `default`, `explorer`, `worker`, `architect`, and `awaiter` TOML
 - Identify the user story, desired outcome, constraints, non-goals, acceptance criteria, edge cases, and validation plan.
 - Build or refresh skill routing from that working brief state, including the user story, explicit task list, active plan items, and unresolved requirements, instead of relying only on the raw request text.
 - On every prompt or resumed turn, resolve the scoped memory first with `claude-skills memory scope resolve --create-missing --refresh-system-map`, locate the workspace-scoped global `SYSTEM_MAP.md` under the reference lane, and read scoped memory plus that map before deciding whether broader repository analysis is needed.
-- If that scoped `SYSTEM_MAP.md` is missing, stale, or contradicted by the current code, refresh it first with `claude-skills memory system-map refresh` and keep it in Codex-global project-scoped storage instead of the user workspace.
+- If that scoped `SYSTEM_MAP.md` is missing, stale, or contradicted by the current code, refresh it first with `claude-skills memory system-map refresh` and keep it in Claude Code-global project-scoped storage instead of the user workspace.
 - The scoped `SYSTEM_MAP.md` should record visible top-level folders, files, direct child structure, applications, entrypoints, main flows, and key ownership hints so agents can navigate by map first instead of blindly scanning.
 - If the repository is a monorepo or multi-app workspace, group the scoped `SYSTEM_MAP.md` by app so unrelated entrypoints and downstream flows do not get mixed together.
 - If the map or current analysis cannot confirm a fact, record `Not found` instead of guessing.
@@ -274,17 +274,17 @@ The old generic `default`, `explorer`, `worker`, `architect`, and `awaiter` TOML
 
 **Use the cheapest useful context first to save time and tokens:**
 - Start with the working brief, impacted paths, and acceptance criteria rather than loading whole files immediately.
-- **Native claude-skills Invocation Rule:** Treat `claude-skills ...` as the command shape, not a guaranteed literal executable name. The managed install keeps the native binary in the Codex home root; it does not make bare `claude-skills ...` globally available by default. From a source checkout, run `cargo run --bin claude-skills -- ...`. After install, run the explicit native binary such as `~/.claude/claude-skills ...`, `%USERPROFILE%\\.codex\\claude-skills.exe ...`, `./claude-skills ...`, or `.\\claude-skills.exe ...`. Do not use shell or PowerShell wrapper launchers.
+- **Native claude-skills Invocation Rule:** Treat `claude-skills ...` as the command shape, not a guaranteed literal executable name. The managed install keeps the native binary in the Claude Code home root; it does not make bare `claude-skills ...` globally available by default. From a source checkout, run `cargo run --bin claude-skills -- ...`. After install, run the explicit native binary such as `~/.claude/claude-skills ...`, `%USERPROFILE%\\.claude-skills\\claude-skills.exe ...`, `./claude-skills ...`, or `.\\claude-skills.exe ...`. Do not use shell or PowerShell wrapper launchers.
 - When a native `claude-skills` command already covers the job, prefer the native executable or source-checkout command path over recreating the same behavior through generic function or tool orchestration.
 - Use `SYSTEM_MAP.md` plus file doc headers as the first navigation layer; avoid blind repo sweeps and widen only when the map is insufficient for the current task.
-- Keep the map global and project-scoped: the canonical file lives in the scoped workspace reference directory under Codex home, not in the user repository.
+- Keep the map global and project-scoped: the canonical file lives in the scoped workspace reference directory under Claude Code home, not in the user repository.
 - When creating or refreshing the map, start from the most relevant entrypoint and trace `Trigger/Entry -> Handler/Controller -> Business Logic/Service -> Data Access/Repository -> Database/Storage/External I-O`.
 - Respect universal exclusions for map-building and early discovery unless the user explicitly asks otherwise: `node_modules`, `.venv`, `venv`, `env`, `vendor`, `target`, `.gradle`, `bin`, `obj`, `pkg`, `.git`, `.vscode`, `.idea`, `__pycache__`, `dist`, `build`, `tmp`, `coverage`, `.next`, `.nuxt`, `.cache`, plus generated artifact files such as `*.log`, `*.lock`, `*.min.*`, and `*.map`.
 - Before editing, note the target file and the traced function or flow that will be touched.
 - Before editing any existing source file, run a Preserve Existing Flow check unless the change is docs-only, formatting-only, generated-only, or explicitly greenfield. The check must name the target file or function, current behavior to preserve, entry point, producer, source of truth, storage/state/queue owner, side-effect owner, consumers, cleanup/recovery path, edit boundary, validation needed, and validation evidence in `~/.claude/memories/workspaces/<workspace-slug>/flow/flow-check.json`.
 - Before each patch batch, re-read the exact target file and named function or module that will change; after each patch batch, re-read the edited target plus direct callers, direct callees, and the surrounding owner surface before expanding scope or finalizing.
 - For repo-local discovery, prefer `claude-skills code-search search` before broad repo scans or repeated file reads; narrow with `--path` when the user already named a module, route, or directory.
-- Prefer the installed Codex-home root executable when the skill pack is already synced: `~/.claude/claude-skills` on macOS or Linux and `~/.claude/claude-skills.exe` on Windows are the canonical direct-run paths for the managed install and the preferred global discovery paths for agents.
+- Prefer the installed Claude Code-home root executable when the skill pack is already synced: `~/.claude/claude-skills` on macOS or Linux and `~/.claude/claude-skills.exe` on Windows are the canonical direct-run paths for the managed install and the preferred global discovery paths for agents.
 - Use exact file, symbol, or keyword search first.
 - Read targeted snippets and direct callers/callees second.
 - When work crosses layers, sample one representative file per layer first (for example route/controller, service, repository, page/component, and test) before widening the read set.
@@ -320,14 +320,14 @@ The old generic `default`, `explorer`, `worker`, `architect`, and `awaiter` TOML
 
 **Knowledge Retention (Memory Schema & Pruning):**
 - **Do Not Bloat:** Never blindly append massive logs to memory files.
-- **Schema Enforcement:** When writing to `.codex_knowledge.md` or `.codex_lessons.md`, the agent MUST consolidate, deduplicate, and index the file. Use a strict Markdown schema:
+- **Schema Enforcement:** When writing to `.claude_knowledge.md` or `.claude_lessons.md`, the agent MUST consolidate, deduplicate, and index the file. Use a strict Markdown schema:
   - `## [Topic/Error Name]`
   - `**Context:** Brief 1-sentence description.`
   - `**Resolution/Pattern:** The exact fix or architectural rule to apply.`
 - **Future-agent Reuse:** Future agents must check this indexed memory to skip redundant research.
-- **Layered Memory:** Keep memory layered the way a human would: Codex built-in memory is the first layer, and the repo-owned durable second layer lives under `~/.claude/memoriesv2/` split into global, workspace, workstream, and optional lane files. Use high-level reusable guidance in summaries, workspace-scoped notes under `~/.claude/memoriesv2/workspaces/<workspace-slug>/`, workstream notes under `~/.claude/memoriesv2/workspaces/<workspace-slug>/workstreams/<workstream-key>/`, optional lane notes under `~/.claude/memoriesv2/workspaces/<workspace-slug>/workstreams/<workstream-key>/lanes/<agent-instance>/`, research-cache findings with freshness metadata, and exact commands, errors, or evidence only in deeper task-specific notes when they are reusable.
+- **Layered Memory:** Keep memory layered the way a human would: Claude Code built-in memory is the first layer, and the repo-owned durable second layer lives under `~/.claude/memoriesv2/` split into global, workspace, workstream, and optional lane files. Use high-level reusable guidance in summaries, workspace-scoped notes under `~/.claude/memoriesv2/workspaces/<workspace-slug>/`, workstream notes under `~/.claude/memoriesv2/workspaces/<workspace-slug>/workstreams/<workstream-key>/`, optional lane notes under `~/.claude/memoriesv2/workspaces/<workspace-slug>/workstreams/<workstream-key>/lanes/<agent-instance>/`, research-cache findings with freshness metadata, and exact commands, errors, or evidence only in deeper task-specific notes when they are reusable.
 - **L1 L2 L3 Memory Map:** Treat the small always-read workspace guidance, summaries, `SESSION-STATE.md`, and `working-buffer.md` as L1 brain files; keep scoped `~/.claude/memoriesv2/` workspace, workstream, and lane lanes as L2 working memory; keep deeper SOPs, playbooks, and scoped `reference/` material as L3 reference opened on demand. One home per fact, and information should flow down instead of being duplicated across every layer.
-- **Second-Layer Memory Rule:** The supported write surface stays the Rust-native `claude-skills memory ...` commands, but those writes must keep `memoriesv2` synchronized as the global second-layer memory instead of leaving durable workflow state only in chat or only in first-layer Codex memory. Use `claude-skills memoriesv2 scope resolve` to inspect the resolved second-layer files before broad memory reads or when validating where durable state landed.
+- **Second-Layer Memory Rule:** The supported write surface stays the Rust-native `claude-skills memory ...` commands, but those writes must keep `memoriesv2` synchronized as the global second-layer memory instead of leaving durable workflow state only in chat or only in first-layer Claude Code memory. Use `claude-skills memoriesv2 scope resolve` to inspect the resolved second-layer files before broad memory reads or when validating where durable state landed.
 - **WAL Protocol:** Scan every new user message for corrections, decisions, proper nouns, preferences, and specific values that must survive compaction. If any appear, write them directly through the Rust-native `claude-skills memory maintenance ...` surface from the main lane, let that native writer mirror the durable state into `~/.claude/memoriesv2/workspaces/<workspace-slug>/workstreams/<workstream-key>/`, and validate the touched memory files before responding. The default durable targets are the readable `SESSION-STATE.md`, the append-only `session-wal.jsonl`, and the scoped second-layer workstream files under `memoriesv2`.
 - **Working Buffer Rule:** When context pressure gets high or a task is still unfolding across multiple turns, append fresh breadcrumbs to `working-buffer.md` before context gets compacted away. Read the working buffer back after resets before assuming the previous turn state is still intact.
 - **Working Brief Rule:** For non-trivial or compaction-prone work, persist the scoped working brief and explicit task list with `claude-skills memory working-brief`, keep the top-level plan items current there, and reload that brief after compaction instead of trusting recall.
@@ -498,7 +498,7 @@ REPEAT UNTIL CLEAN:
 ```
 
 **Mistake & Solution Memory (Crucial):**
-- If an error, bug, or mistake requires significant effort to resolve, you MUST record the mistake and its verified solution to `.codex_lessons.md`.
+- If an error, bug, or mistake requires significant effort to resolve, you MUST record the mistake and its verified solution to `.claude_lessons.md`.
 - Tool-usage mistakes count here too: if `js_repl`, `exec_command`, `write_stdin`, `apply_patch`, or another tool was used incorrectly and the correction is reusable, record it as a mistake with the tool name and prevention note.
 - Follow the **Memory Schema & Pruning** rules above (Consolidate, Deduplicate, Index) to prevent file bloat. This ensures the system explicitly learns without exhausting the context window.
 
@@ -697,7 +697,7 @@ REPEAT UNTIL CLEAN:
 - Reviewer lanes must read the working brief, scoped memory, `SYSTEM_MAP.md`, the changed-surface map, and proving validation evidence before findings or approval.
 - During final code review on this Rust-backed repo, run `cargo test --workspace` and wait for it to finish before passing the gate.
 - After implementation and repo-wide proof on non-trivial work, run a second reviewer-quality pass before the final answer.
-- Use `.codex-review.json` as the tracked rule engine for PR-native automation, use `claude-skills review learn summarize` to inspect repeated accepted feedback, and require `claude-skills review learn apply-promotion` with an explicit approval note before a learned suggestion becomes policy.
+- Use `.claude-review.json` as the tracked rule engine for PR-native automation, use `claude-skills review learn summarize` to inspect repeated accepted feedback, and require `claude-skills review learn apply-promotion` with an explicit approval note before a learned suggestion becomes policy.
 
 **New Features:**
 - Unit tests for business logic
@@ -720,7 +720,7 @@ REPEAT UNTIL CLEAN:
 
 ## Feature Flags
 
-Your Codex CLI has these features enabled:
+Your Claude Code CLI has these features enabled:
 - `unified_exec`: Unified execution mode
 - `js_repl`: JavaScript REPL for complex operations
 - `js_repl_tools_only`: Route tools through js_repl
@@ -736,7 +736,7 @@ Use features when they provide clear value, not by default.
 - Never mix multiple features or unrelated fixes in the same branch or merge request.
 - Use `git add -p` when selective staging is required.
 - Review `git diff --cached` before each commit.
-- When a commit body is needed, keep it professional and non-chatty, make the title and body match the committed diff exactly, and include only the sections the change genuinely needs. Use this order when present: `Problem`, `Solution`, `Summary`, `Notes`, `What Changed`, `Test Result`. Omit `Problem` and `Solution` when the commit is additive, preventive, or housekeeping rather than fixing a concrete issue, keep `Test Result` limited to validation that directly proves the committed change, and do not mention Codex, claude-skills, or tool-brand validation in commit or PR text unless the change itself is about those surfaces.
+- When a commit body is needed, keep it professional and non-chatty, make the title and body match the committed diff exactly, and include only the sections the change genuinely needs. Use this order when present: `Problem`, `Solution`, `Summary`, `Notes`, `What Changed`, `Test Result`. Omit `Problem` and `Solution` when the commit is additive, preventive, or housekeeping rather than fixing a concrete issue, keep `Test Result` limited to validation that directly proves the committed change, and do not mention Claude Code, claude-skills, or tool-brand validation in commit or PR text unless the change itself is about those surfaces.
 - Run `claude-skills git-workflow preflight --repo-root . --base-ref origin/main` before push or merge-request creation.
 - When opening a PR or MR from the CLI, never publish bodies with escaped newline sequences such as `\\n`; use a real multiline body or a `--body-file` flow instead.
 - Reject or request a split when the diff cannot be described as one cohesive feature.
@@ -805,11 +805,11 @@ Use features when they provide clear value, not by default.
 ## Windows Environment
 
 When running commands on Windows:
-- Let Codex choose the most appropriate supported tool surface for the active runtime.
+- Let Claude Code choose the most appropriate supported tool surface for the active runtime.
 - Use the most direct supported tool surface for the task. Reach for `js_repl` with
-  `codex.tool(...)` only when a persistent Node context helps, when JavaScript-side orchestration is
+  `claude.tool(...)` only when a persistent Node context helps, when JavaScript-side orchestration is
   clearly better, or when the runtime explicitly requires that path.
-- Inside `codex.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`.
+- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`.
 - Use PowerShell only for PowerShell cmdlets/scripts or when shell-specific quoting, pipelines, or object semantics are required.
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands or `%VAR%` syntax.
 - Git Bash available but not assumed
@@ -899,7 +899,7 @@ Before completing any task, verify ALL of these:
 ## Final Output
 
 For non-trivial tasks, append a compact **Learning Snapshot** when memory artifacts are available:
-1. ✓ What Codex learned today
+1. ✓ What Claude Code learned today
 2. ✓ Mistakes encountered and whether they were resolved
 3. ✓ Tool-use mistakes that taught a reusable lesson
 4. ✓ Heuristic memory-health stats such as growth or momentum
@@ -915,22 +915,22 @@ Keep reasoning settings explicit while leaving model choice to the workspace def
 - **repo-managed specialist baseline**: Use `reasoning_effort: "high"` for synced skill profiles that perform review, planning, verification, security-sensitive work, architecture decisions, or release gates.
 - **local narrow override**: A user-local override may lower reasoning for bounded status or inventory reporting, such as `memory-status-reporter`, when the task is intentionally cheaper and lower risk.
 
-Do not pin a model to achieve these settings. Preserve reasoning effort in repo-managed profiles and let the active Codex workspace choose the model.
+Do not pin a model to achieve these settings. Preserve reasoning effort in repo-managed profiles and let the active Claude Code workspace choose the model.
 
 ## Skill Model Policy
 
-- Do not pin a specific model inside root Codex `agents/openai.yaml` files or generated agent-profile TOML. Let the workspace default model handle that choice.
-- Keep root Codex skill `reasoning_effort` at the repo-managed specialist baseline (`high`) for deeper review and verification passes.
+- Do not pin a specific model inside root Claude Code `agents/claude.yaml` files or generated agent-profile TOML. Let the workspace default model handle that choice.
+- Keep root Claude Code skill `reasoning_effort` at the repo-managed specialist baseline (`high`) for deeper review and verification passes.
 - Sync the 13 skill-owned agent profiles into `~/.claude/agent-profiles/*.toml` with their skill instructions attached, `model_reasoning_effort = "high"`, and no `model = ...` entry.
-- A local `memory-status-reporter` override from `~/.claude/.codex-skill-manager/local-home-agent-overrides.json` may narrow only that profile to `low` reasoning unless the user explicitly changes local policy.
-- When any Codex skill executes tools in this runtime, let Codex choose the best supported tool
+- A local `memory-status-reporter` override from `~/.claude/.claude-skill-manager/local-home-agent-overrides.json` may narrow only that profile to `low` reasoning unless the user explicitly changes local policy.
+- When any Claude Code skill executes tools in this runtime, let Claude Code choose the best supported tool
   surface for the task.
-- Use `js_repl` with `codex.tool(...)` when it is the clearest fit or when the runtime explicitly
+- Use `js_repl` with `claude.tool(...)` when it is the clearest fit or when the runtime explicitly
   requires it, but do not hard-require `js_repl` for every tool call.
 
 ## Summary
 
-Keep execution simple and focused. Use specialist skills when they add clear value. Prioritize code quality, security, maintainability, and native Codex CLI workflow surfaces.
+Keep execution simple and focused. Use specialist skills when they add clear value. Prioritize code quality, security, maintainability, and native Claude Code CLI workflow surfaces.
 
 ## Git Identity Policy
 

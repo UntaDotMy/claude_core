@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide safe Git, branching, commit, pull-request, merge, recovery, and repository-hosting workflows.
-Caller: Codex agents handling repository state, history, branch, PR, MR, or hosted-check work.
+Caller: Claude Code agents handling repository state, history, branch, PR, MR, or hosted-check work.
 Dependencies: Current Git state, branch policy, hosted checks, user approval, and selective Git reference files.
 Main Functions: Define safe Git operations, high-risk gates, PR workflow, and repository hygiene checks.
 Side Effects: Shapes branch strategy, commit guidance, hosted workflow behavior, and recovery decisions.
@@ -431,8 +431,8 @@ Load references as needed for specific topics.
 ## Windows Environment
 
 When running commands on Windows:
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
-- Inside `codex.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
+- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands
 - Use forward slashes in paths when possible

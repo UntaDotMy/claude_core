@@ -1,23 +1,23 @@
 <!--
-Purpose: Document the managed Codex lifecycle hook contract for agents and operators.
+Purpose: Document the managed Claude Code lifecycle hook contract for agents and operators.
 Caller: README, AGENTS.md, and contributors looking for the hook usage and rerun handling rules.
 Dependencies: ~/.claude/hooks.json layout, claude-skills run wrapper, and claude-skills rewrite.
 Main Functions: Explain what the hook does, what it does not do, and how agents interact with transparent rewrite.
 Side Effects: None; documentation only.
 -->
-# Codex Hook Usage
+# Claude Code Hook Usage
 
-The managed hook set is installed at `~/.claude/hooks.json` by the one-line installer and by `claude-skills hook install`. It manages every supported Codex lifecycle event: `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, and `Stop`. `PreToolUse` is the only event that blocks and reroutes noisy Bash commands because token-saving has to happen before command output exists; the other lifecycle hooks are native no-op/checkpoint surfaces for memory and recovery wiring. This page is the agent-facing contract; `claude-skills hook instructions` prints the same content (`--format markdown` is the default; `--format json` returns a structured payload).
+The managed hook set is installed at `~/.claude/hooks.json` by the one-line installer and by `claude-skills hook install`. It manages every supported Claude Code lifecycle event: `PreToolUse`, `PermissionRequest`, `PostToolUse`, `PreCompact`, `PostCompact`, `SessionStart`, `UserPromptSubmit`, and `Stop`. `PreToolUse` is the only event that blocks and reroutes noisy Bash commands because token-saving has to happen before command output exists; the other lifecycle hooks are native no-op/checkpoint surfaces for memory and recovery wiring. This page is the agent-facing contract; `claude-skills hook instructions` prints the same content (`--format markdown` is the default; `--format json` returns a structured payload).
 
 ## Token-saving rule
 
-The goal is to prevent noisy raw command output from entering Codex context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or rely on the hook's transparent rewrite before noisy output is produced.
+The goal is to prevent noisy raw command output from entering Claude Code context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or rely on the hook's transparent rewrite before noisy output is produced.
 
 ## What the hook does
 
 - Inspects supported Bash commands and transparently rewrites them via `toolInputOverride`.
 - Wraps the original command in `claude-skills run --` before it executes, preventing noisy output from entering context.
-- Emits command-specific semantic reducers, high-signal error/warning context, and compacted head/tail summaries for noisy or long output while recording the full raw stream under the Codex home raw-output recovery log.
+- Emits command-specific semantic reducers, high-signal error/warning context, and compacted head/tail summaries for noisy or long output while recording the full raw stream under the Claude Code home raw-output recovery log.
 - Records native savings analytics for `claude-skills gain`, including command family and reducer dimensions.
 
 ## What the hook does not do

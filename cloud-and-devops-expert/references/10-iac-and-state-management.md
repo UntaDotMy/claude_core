@@ -47,10 +47,10 @@
 - Treating manual console fixes as permanent instead of codifying or intentionally removing them
 - Granting wildcard IAM because module boundaries were never clarified
 
-## Codex Runtime Boundaries
+## Claude Code Runtime Boundaries
 
-- Codex can review HCL, manifests, module structure, and plan-safe refactors in repository state.
-- Codex cannot confirm actual provider state, drift details, resource replacement behavior, or access-policy enforcement without plan output or live evidence.
+- Claude Code can review HCL, manifests, module structure, and plan-safe refactors in repository state.
+- Claude Code cannot confirm actual provider state, drift details, resource replacement behavior, or access-policy enforcement without plan output or live evidence.
 - When provider access is unavailable, require plan files, import logs, state summaries, and operator confirmation before declaring rollout safety.
 
 ## Related References

@@ -71,7 +71,7 @@ impl Application {
             "bootstrap-info" => {
                 self.run_bootstrap_info_command(command_arguments, standard_output, standard_error)
             }
-            "install" | "i" | "sync" | "s" | "codex" => manager::run_install_command(
+            "install" | "i" | "sync" | "s" => manager::run_install_command(
                 &self.effective_build_version(),
                 command_arguments,
                 standard_output,
@@ -353,7 +353,7 @@ impl Application {
                 ));
             }
             object_fields.push((
-                "codexHomeDirectory".into(),
+                "claudeHomeDirectory".into(),
                 Value::String(effective_claude_home.clone()),
             ));
             object_fields.push((

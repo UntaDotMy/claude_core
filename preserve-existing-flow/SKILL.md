@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Preserve existing behavior and ownership paths before changing brownfield systems.
-Caller: Codex agents modifying established code, firmware, drivers, transport layers, state machines, UI flows, CLIs, services, or protocol handlers.
+Caller: Claude Code agents modifying established code, firmware, drivers, transport layers, state machines, UI flows, CLIs, services, or protocol handlers.
 Dependencies: Repository flow tracing, direct caller and callee inspection, validation evidence, and any user-marked read-only references.
 Main Functions: Require flow-first investigation, ownership mapping, safe extension boundaries, and review fail conditions.
 Side Effects: Slows edits until the current owner path, source of truth, and recovery behavior are understood.

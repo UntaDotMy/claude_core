@@ -112,7 +112,7 @@ pub fn run_status_command(
     let target = detect_current_target()
         .map(|value| value.directory_name())
         .unwrap_or_else(|error| format!("unknown ({error})"));
-    let _ = writeln!(standard_output, "Codex Skill Pack Status");
+    let _ = writeln!(standard_output, "Claude Code Skill Pack Status");
     let _ = writeln!(standard_output);
     let _ = writeln!(standard_output, "Summary:");
     let _ = writeln!(standard_output, "  Manager version: {build_version}");
@@ -129,7 +129,7 @@ pub fn run_status_command(
         update_status
     );
     let _ = writeln!(standard_output);
-    let _ = writeln!(standard_output, "Codex Skills:");
+    let _ = writeln!(standard_output, "Claude Code Skills:");
     let _ = writeln!(standard_output, "  Source: {}", source_display);
     let _ = writeln!(
         standard_output,
@@ -228,7 +228,7 @@ pub fn run_doctor_command(
             && hooks_text.contains(crate::hooks::claude::pre_tool_matcher()),
         "PreToolUse Bash matcher installed",
     );
-    let dry_run_blocks = codex_hook_blocks_raw_command();
+    let dry_run_blocks = hook_blocks_raw_command();
     write_doctor_check(
         standard_output,
         dry_run_blocks,
@@ -236,12 +236,12 @@ pub fn run_doctor_command(
     );
     write_doctor_check(
         standard_output,
-        codex_hook_accepts_wrapped_command() && installed_executable_path(&claude_home).exists(),
+        hook_accepts_wrapped_command() && installed_executable_path(&claude_home).exists(),
         "rerun wrapper command is accepted",
     );
     let _ = writeln!(
         standard_output,
-        "[warn] unified_exec interception incomplete in current Codex"
+        "[warn] unified_exec interception incomplete in current Claude Code"
     );
     let _ = writeln!(
         standard_output,
@@ -255,13 +255,13 @@ pub fn run_doctor_command(
     0
 }
 
-fn codex_hook_blocks_raw_command() -> bool {
+fn hook_blocks_raw_command() -> bool {
     run_hook_probe("cargo test --workspace")
         .map(|output| output.contains("permissionDecision") && output.contains("Rerun that as:"))
         .unwrap_or(false)
 }
 
-fn codex_hook_accepts_wrapped_command() -> bool {
+fn hook_accepts_wrapped_command() -> bool {
     let executable = std::env::current_exe()
         .map(|path| display_path(&path))
         .unwrap_or_else(|_| "claude-skills".to_string());
@@ -694,7 +694,7 @@ pub fn run_all_command(
 }
 
 pub fn run_menu_command(standard_output: &mut dyn Write) -> u8 {
-    let _ = writeln!(standard_output, "Codex Skill Manager");
+    let _ = writeln!(standard_output, "Claude Code Skill Manager");
     let _ = writeln!(
         standard_output,
         "  [1] install  - install or refresh managed Rust-native files"
@@ -1377,7 +1377,7 @@ fn verify_install(
     let layout = discover_repository_layout(&repository_root)?;
     if !skills_directory(&claude_home).is_dir() {
         return Err(format!(
-            "Codex skill pack is not installed in Claude home: {}",
+            "Claude Code skill pack is not installed in Claude home: {}",
             display_path(&claude_home)
         ));
     }

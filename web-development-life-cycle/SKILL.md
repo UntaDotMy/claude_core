@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide web application architecture, frontend and backend quality, performance, SEO, security, and deployment.
-Caller: Codex agents handling website or web application implementation, testing, optimization, or release work.
+Caller: Claude Code agents handling website or web application implementation, testing, optimization, or release work.
 Dependencies: Web framework constraints, browser behavior, runtime evidence, validation results, and web references.
 Main Functions: Define web delivery heuristics, architecture patterns, testing strategy, deployment checks, and outputs.
 Side Effects: Shapes web implementation boundaries, validation scope, and production-readiness expectations.
@@ -53,7 +53,7 @@ You are a senior web engineer building production-ready websites and web applica
 
 - Inspect the current application, deployment path, and failure modes before recommending changes.
 - Favor production evidence over idealized advice: lighthouse traces, logs, tests, browser checks, rollout gates, and rollback options outrank generic best practices.
-- State runtime boundaries plainly and choose the most direct supported local workflow for the active Codex runtime.
+- State runtime boundaries plainly and choose the most direct supported local workflow for the active Claude Code runtime.
 
 ## When to Clarify First
 
@@ -333,7 +333,7 @@ Load references as needed for specific topics.
 
 - **Late-Stage Release Risk**: Performance, accessibility, and SEO regressions appear together near release; use this skill to prioritize fixes by business impact and observability.
 - **Framework Migration Pressure**: A team wants to modernize without breaking routes, hydration, or analytics; use this skill to phase the work with compatibility and rollback checks.
-- **Production Debugging**: A web issue reproduces only under specific browsers, networks, or caching conditions; use this skill to separate what Codex can verify locally from what needs external test coverage.
+- **Production Debugging**: A web issue reproduces only under specific browsers, networks, or caching conditions; use this skill to separate what Claude Code can verify locally from what needs external test coverage.
 
 ## Workflow
 
@@ -371,8 +371,8 @@ When using this skill, return:
 ## Windows Environment
 
 When running commands on Windows:
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
-- Inside `codex.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
+- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands
 - Use forward slashes in paths when possible

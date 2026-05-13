@@ -4,7 +4,7 @@
 - Repository: `UntaDotMy/claude_skills`
 - Audited revision: `5e0bcb33f20ba626ca3e32657ae6f1c8350b9b2c`
 - Scope: governance posture, trust-artifact posture, native CLI compatibility, and static-safety evidence
-- Evidence sources: `todo.md`, `README.md`, `docs/security-audit-status.md`, `.codex-review.json`, `rust/crates/claude-skills/src/commands.rs`, `rust/crates/claude-skills/src/manager.rs`, `rust/crates/claude-skills/src/utility.rs`, and `cargo test --workspace`
+- Evidence sources: `todo.md`, `README.md`, `docs/security-audit-status.md`, `.claude-review.json`, `rust/crates/claude-skills/src/commands.rs`, `rust/crates/claude-skills/src/manager.rs`, `rust/crates/claude-skills/src/utility.rs`, and `cargo test --workspace`
 
 ## Conclusion
 

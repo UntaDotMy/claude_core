@@ -11,7 +11,7 @@ This repo is Windows-first. Do not assume any Linux subsystem is installed.
 
 ## Detection Sequence
 
-1. Start from `js_repl` with `codex.tool(...)`; only choose an explicit shell when command behavior depends on it.
+1. Start from `js_repl` with `claude.tool(...)`; only choose an explicit shell when command behavior depends on it.
 2. Avoid PowerShell wrappers for ordinary commands; prefer direct command strings or explicit executable calls inside `exec_command`.
 3. Check whether PowerShell is required (common signals):
    - `.ps1` scripts, PowerShell cmdlets, `$env:` syntax, or pipeline/object semantics
@@ -22,7 +22,7 @@ This repo is Windows-first. Do not assume any Linux subsystem is installed.
 
 ## Command Selection Rules
 
-1. Default to `js_repl` + `codex.tool("exec_command", { cmd: "<tool> <args>" })` for ordinary commands.
+1. Default to `js_repl` + `claude.tool("exec_command", { cmd: "<tool> <args>" })` for ordinary commands.
 2. If a command is PowerShell-specific, run it explicitly:
    - Script file: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File <script.ps1>`
    - One-liner: `powershell.exe -NoProfile -Command "<command>"`

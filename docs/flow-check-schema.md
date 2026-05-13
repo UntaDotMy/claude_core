@@ -13,7 +13,7 @@ Existing source-file edits need a flow-check artifact before review gates pass. 
 claude-skills flow start --target-file rust/crates/claude-skills/src/commands.rs --target-function Application::run
 ```
 
-The default artifact lives in Codex-global per-workspace storage, not in the repository checkout. CI review gates should read that same global path or an explicit `--artifact <path>` override; do not commit the default runtime artifact into the user workspace. It records the evidence that must exist before editing established code.
+The default artifact lives in Claude Code-global per-workspace storage, not in the repository checkout. CI review gates should read that same global path or an explicit `--artifact <path>` override; do not commit the default runtime artifact into the user workspace. It records the evidence that must exist before editing established code.
 
 ## Schema
 

@@ -48,7 +48,7 @@ Use this map to load only the references needed for the requested review target.
 | Low-reasoning exploration quorum checks (minimum two low-effort exploration streams plus synthesis consensus) | 50-feedback-style-and-remediation.md + 10-requirements-traceability-and-prd-review.md |
 | Medium-reasoning dual-stream synthesis checks (exactly two medium-effort streams, min 2 max 2, with synthesis output) | 50-feedback-style-and-remediation.md + 10-requirements-traceability-and-prd-review.md |
 | Final-reviewer role binding checks (final review must run in reviewer role, not default) | 50-feedback-style-and-remediation.md + 40-testing-release-production-readiness-review.md |
-| js_repl-tools-only compliance checks for agents (tool calls via js_repl + codex.tool flow) | 99-source-anchors.md + 40-testing-release-production-readiness-review.md |
+| js_repl-tools-only compliance checks for agents (tool calls via js_repl + claude.tool flow) | 99-source-anchors.md + 40-testing-release-production-readiness-review.md |
 | Strict code-quality zero-tolerance checks (no small mistakes in readability/reuse/duplication/naming/maintainability) | 21-function-reuse-and-simplicity-review.md + 27-architecture-modularity-and-maintainability-review.md + 29-style-formatting-and-readability-review.md |
 | Anti-hallucination recovery harness checks (detect, re-read, reproduce, re-research, retry, re-validate) | 50-feedback-style-and-remediation.md + 99-source-anchors.md |
 | Summary-first handoff quality checks (compact packet, no raw full-prompt/history replay) | 50-feedback-style-and-remediation.md + 10-requirements-traceability-and-prd-review.md |
@@ -83,7 +83,7 @@ Use this map to load only the references needed for the requested review target.
 23. Validate low-reasoning exploration quorum evidence (minimum two low-effort streams plus synthesis consensus) when low exploration is used.
 24. Validate medium-reasoning dual-stream synthesis evidence (exactly two medium-effort streams, min 2 max 2, plus synthesized output) when medium analysis/context/review streams are used.
 25. Validate final-reviewer role binding evidence (reviewer role used for final review, not default).
-26. Validate js_repl-tools-only compliance for agents (tool calls via js_repl + codex.tool flow when applicable).
+26. Validate js_repl-tools-only compliance for agents (tool calls via js_repl + claude.tool flow when applicable).
 27. Validate strict code-quality zero-tolerance handling (no unresolved small code-quality mistakes in strict categories).
 28. Validate anti-hallucination recovery harness evidence when uncertainty occurred (detect -> re-read -> reproduce -> re-research -> retry -> re-validate).
 29. Validate summary-first handoff quality (compact packet used and no raw full-prompt/history replay).

@@ -19,14 +19,14 @@ Use these sources for current, evidence-backed Git workflow guidance.
 - `git cherry-pick`: https://git-scm.com/docs/git-cherry-pick
 - `git clean`: https://git-scm.com/docs/git-clean
 
-## Codex Agent Orchestration References
+## Claude Code Agent Orchestration References
 
-- OpenAI Codex CLI slash commands: https://developers.openai.com/codex/cli#slash-commands
-- OpenAI Codex changelog: https://developers.openai.com/codex/changelog
-- OpenAI Codex release 0.106.0 notes: https://github.com/openai/codex/releases/tag/rust-v0.106.0
-- Codex js_repl documentation (repo): https://raw.githubusercontent.com/openai/codex/main/docs/js_repl.md
-- Codex feature registry (repo): https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/src/features.rs
-- Codex js_repl minimum Node version: https://raw.githubusercontent.com/openai/codex/main/codex-rs/node-version.txt
+- Claude Code slash commands: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/cli-usage
+- Claude Code changelog: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/changelog
+
+- (removed: js_repl is not part of Claude Code)
+- (removed: not part of Claude Code)
+- (removed: js_repl is not part of Claude Code)
 
 ## Collaboration and Pull Request Workflow
 

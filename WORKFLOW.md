@@ -4,7 +4,7 @@
 
 Before running raw shell, broad search, or patching existing source, route through the native `claude-skills` surface:
 
-**Token-saving rule:** the goal is to prevent noisy raw command output from entering Codex context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or the hook-provided `Rerun that as:` wrapper before noisy output is produced.
+**Token-saving rule:** the goal is to prevent noisy raw command output from entering Claude Code context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or the hook-provided `Rerun that as:` wrapper before noisy output is produced.
 
 - **Noisy shell commands:** prefer `claude-skills run -- <command>` for test, build, lint, log, status, search, Docker, Kubernetes, Terraform, package-manager, and CI-style commands. Use `claude-skills rewrite "<command>"` when unsure whether a command has native compaction.
 - **Hook block-and-rerun:** if the managed `PreToolUse` hook returns `Rerun that as: <command>`, immediately run that exact command. Do not ask the user, do not treat the hook block as a task failure, and do not repeat the raw command first.
@@ -14,7 +14,7 @@ Before running raw shell, broad search, or patching existing source, route throu
 
 ## Hook Retry Handling
 
-The managed `PreToolUse` hook may return a Codex denial whose reason begins with `Rerun that as:`. This is expected behavior, not a failure. Copy the suggested command, run it exactly once, preserve the exit code and output, and continue from the compacted output. Only ask the user when the suggested command itself is destructive or outside the requested task.
+The managed `PreToolUse` hook may return a Claude Code denial whose reason begins with `Rerun that as:`. This is expected behavior, not a failure. Copy the suggested command, run it exactly once, preserve the exit code and output, and continue from the compacted output. Only ask the user when the suggested command itself is destructive or outside the requested task.
 
 ## Feature Branch and Merge Request Rules
 
@@ -47,7 +47,7 @@ A feature branch must not contain:
 - Feature-delivery branches use `feat/<name>`, `fix/<name>`, `improve/<name>`, or `add/<name>`.
 - Commit subjects should use `feat:`, `fix:`, `improve:`, or `add:`, including scoped forms such as `feat(scope): ...`.
 - When a commit body is needed, keep it professional, non-chatty, and matched to the committed diff. Use a precise title, include only the sections the change genuinely needs, and keep this order when a section is present: `Problem`, `Solution`, `Summary`, `Notes`, `What Changed`, `Test Result`. Omit `Problem` and `Solution` when the commit is additive, preventive, or housekeeping rather than fixing a concrete issue, and keep `Test Result` limited to validation that directly proves the committed change.
-- do not mention Codex, claude-skills, or tool-brand validation in commit or PR text unless the change itself is about those surfaces.
+- do not mention Claude Code, claude-skills, or tool-brand validation in commit or PR text unless the change itself is about those surfaces.
 
 ## Required Preflight
 
@@ -88,7 +88,7 @@ Reject or request a split when:
 7. Review `git diff --cached`.
 8. Commit with the tracked feature prefix.
    If a commit body is included, keep it professional, make the title and body match the committed diff exactly, include only the sections the change genuinely needs, and keep this order when a section is present: `Problem`, `Solution`, `Summary`, `Notes`, `What Changed`, `Test Result`. Omit `Problem` and `Solution` when the commit is additive, preventive, or housekeeping rather than fixing a concrete issue, and keep `Test Result` limited to validation that directly proves the committed change.
-   do not mention Codex, claude-skills, or tool-brand validation in commit or PR text unless the change itself is about those surfaces.
+   do not mention Claude Code, claude-skills, or tool-brand validation in commit or PR text unless the change itself is about those surfaces.
 9. Run `claude-skills workflow branch show` when the team needs the full branch-lifecycle path in one place.
 10. Run `claude-skills git-workflow preflight`.
 11. Push and open one merge request.
@@ -123,7 +123,7 @@ Automation cannot prove semantic single-feature scope perfectly. Human review an
 - Use \`claude-skills workflow route\` when the request is broad and the right lane is not obvious yet; the route surface should explain why the recommended path fits the job before any stateful work begins.
 - Use \`claude-skills workflow cockpit\` for the live operator console, live proof-board gates, blockers, recovery path, and closeout commands, \`claude-skills workflow status\` for the broad state, \`claude-skills workflow watch\` for lane health and stalled work, and \`claude-skills workflow audit\` for the final closure decision.
 - Use \`claude-skills workflow finish\` when the workstream is ready to close and the team needs the next operator command to be explicit, and use \`claude-skills workflow branch finish\` when branch closeout should lead directly into merge-ready PR guidance.
-- Use \`claude-skills workflow branch show\` when the branch needs one visible Codex-first path from routing through hosted green checks and final shutdown.
+- Use \`claude-skills workflow branch show\` when the branch needs one visible Claude Code-first path from routing through hosted green checks and final shutdown.
 - Use \`claude-skills workflow worktree start\`, \`claude-skills workflow worktree finish\`, and \`claude-skills workflow worktree discard\` when the branch should be isolated and cleaned up through the workflow surface instead of ad hoc Git commands.
 
 ## Spawned Agent Discipline

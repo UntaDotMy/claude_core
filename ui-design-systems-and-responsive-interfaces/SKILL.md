@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide UI design systems, responsive layout, accessibility, visual polish, and component quality.
-Caller: Codex agents handling UI implementation, redesign, design-system, accessibility, or visual consistency work.
+Caller: Claude Code agents handling UI implementation, redesign, design-system, accessibility, or visual consistency work.
 Dependencies: Existing UI patterns, brand constraints, runtime screenshots, validation evidence, and UI references.
 Main Functions: Define design intelligence, UI quality checks, responsive strategy, workflow, and output contracts.
 Side Effects: Shapes UI decisions, visual validation scope, and design-system governance expectations.
@@ -55,7 +55,7 @@ You are a senior UI designer/engineer creating production-ready, accessible, res
 - Inspect the current components, tokens, layout constraints, and implementation gaps before recommending a UI strategy.
 - Translate the request into a concrete UI brief: user story, primary action, content priority, constraints, visual tone, success criteria, and required states.
 - Favor production evidence over idealized advice: accessibility findings, browser/device checks, interaction bugs, and release constraints outrank generic design opinions.
-- State runtime boundaries plainly and choose the most direct supported local workflow for the active Codex runtime.
+- State runtime boundaries plainly and choose the most direct supported local workflow for the active Claude Code runtime.
 
 ## When to Clarify First
 
@@ -188,7 +188,7 @@ Before finalizing, prune copy aggressively:
 - If persisting those files, never assume optional names exist: normalize the slug, create parent directories first, and fall back to a safe default such as the feature name or repository name.
 - For brownfield work, explicitly state what remains unchanged, what is being modernized, and how regressions will be checked.
 
-## Codex-Native Generator Workflow
+## Claude Code-Native Generator Workflow
 
 When you need a structured starting point instead of freeform design guessing, use the native design-intelligence command first:
 
@@ -459,7 +459,7 @@ Deep UI knowledge in references/:
 - `40-design-systems-components-tokens.md` - Design system governance
 - `50-ui-delivery-quality-and-governance.md` - Quality standards
 - `55-design-intelligence-brownfield-and-component-verification.md` - Design intelligence packets, brownfield redesigns, and component verification loops
-- `57-codex-design-intelligence-generator.md` - Local generator workflow, persistence rules, and automation hooks
+- `57-claude-design-intelligence-generator.md` - Local generator workflow, persistence rules, and automation hooks
 - `60-real-world-benchmarking-and-authenticity.md` - Real-world patterns
 - `70-ui-expertise-playbook.md` - Advanced UI patterns
 - `99-source-anchors.md` - Authoritative sources
@@ -516,8 +516,8 @@ Load references as needed for specific topics.
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `codex.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
+- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
 

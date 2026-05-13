@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide UX research, journey strategy, usability evidence, decision architecture, and recovery-path quality.
-Caller: Codex agents handling user experience, research planning, journey improvement, or product decision support.
+Caller: Claude Code agents handling user experience, research planning, journey improvement, or product decision support.
 Dependencies: User goals, product constraints, evidence sources, validation findings, and UX reference files.
 Main Functions: Define experience briefs, research methods, flow proof, decision checks, and output contracts.
 Side Effects: Shapes product recommendations, validation criteria, and user-journey change boundaries.
@@ -55,7 +55,7 @@ You are a senior UX researcher and strategist guiding product decisions with use
 - Inspect the actual research inputs, product constraints, and delivery context before recommending a UX direction.
 - Translate the request into a UX brief with user story, job-to-be-done, primary journey, decision points, friction risks, and measurable success signals before proposing recommendations.
 - Favor production evidence over idealized advice: real user findings, instrumentation, support signals, and experiment limits outrank generic UX heuristics.
-- State runtime boundaries plainly and choose the most direct supported local workflow for the active Codex runtime.
+- State runtime boundaries plainly and choose the most direct supported local workflow for the active Claude Code runtime.
 
 ## Experience Brief Defaults
 
@@ -529,8 +529,8 @@ Load references as needed for specific topics.
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `codex.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
+- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
 

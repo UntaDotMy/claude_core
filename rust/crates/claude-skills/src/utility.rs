@@ -770,7 +770,7 @@ pub fn run_bench_command(
                         "bounded streaming",
                         "raw-output recovery",
                         "persisted gain analytics",
-                        "Codex lifecycle hook integration",
+                        "Claude Code lifecycle hook integration",
                     ]
                     .iter()
                     .map(|feature| Value::String((*feature).into()))
@@ -1467,7 +1467,7 @@ fn render_system_map(workspace_root: &Path) -> String {
         "# SYSTEM_MAP".to_string(),
         String::new(),
         format!("- workspace_root: {}", display_path(workspace_root)),
-        "- storage: Codex-global per-workspace reference lane".to_string(),
+        "- storage: Claude Code-global per-workspace reference lane".to_string(),
         "- runtime: rust".to_string(),
         "- go_fallback: false".to_string(),
         String::new(),

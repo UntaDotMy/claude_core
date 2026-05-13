@@ -192,21 +192,21 @@ mod tests {
 
     #[test]
     fn cache_directory_uses_claude_home_and_normalized_tag() {
-        let cached = cache_directory("/tmp/codex-home", "2026.03.14.0", &linux_amd64());
+        let cached = cache_directory("/tmp/claude-home", "2026.03.14.0", &linux_amd64());
         assert_eq!(
             cached,
-            PathBuf::from("/tmp/codex-home/.claude-skill-manager/bin/v2026.03.14.0/linux-amd64")
+            PathBuf::from("/tmp/claude-home/.claude-skill-manager/bin/v2026.03.14.0/linux-amd64")
         );
 
         let bootstrap_cached = cache_directory(
-            "/tmp/codex-home",
+            "/tmp/claude-home",
             "bootstrap-sample-release",
             &linux_amd64(),
         );
         assert_eq!(
             bootstrap_cached,
             PathBuf::from(
-                "/tmp/codex-home/.claude-skill-manager/bin/bootstrap-sample-release/linux-amd64"
+                "/tmp/claude-home/.claude-skill-manager/bin/bootstrap-sample-release/linux-amd64"
             )
         );
     }
@@ -226,8 +226,8 @@ mod tests {
     #[test]
     fn installed_executable_path_uses_claude_home_root() {
         assert_eq!(
-            installed_executable_path("/tmp/codex-home", &linux_amd64()),
-            PathBuf::from("/tmp/codex-home/claude-skills")
+            installed_executable_path("/tmp/claude-home", &linux_amd64()),
+            PathBuf::from("/tmp/claude-home/claude-skills")
         );
         assert_eq!(
             installed_executable_path("C:/Users/example/.claude", &windows_amd64()),

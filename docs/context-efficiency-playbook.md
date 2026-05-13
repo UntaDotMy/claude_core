@@ -1,6 +1,6 @@
 # Context Efficiency Playbook
 
-This document captures the retrieval, token-efficiency, and memory-architecture techniques that best fit this Codex skill pack.
+This document captures the retrieval, token-efficiency, and memory-architecture techniques that best fit this Claude Code skill pack.
 
 ## Goals
 

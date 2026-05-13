@@ -1,31 +1,31 @@
 <!--
 Purpose: Keep skill routing, escalation, and context-retrieval rules aligned across the managed skill pack.
-Caller: Synced Codex guidance files and contributors updating routing doctrine.
+Caller: Synced Claude Code guidance files and contributors updating routing doctrine.
 Dependencies: Native memory scope, workflow, review, and manager policy surfaces.
 Main Functions: Define routing principles, overlap resolution, and lightweight context policy.
 Side Effects: Changes the installed root guidance that all synced skills inherit.
 -->
-# Skill Routing and Escalation (Codex CLI)
+# Skill Routing and Escalation (Claude Code CLI)
 
-This document defines how skills should route to each other, when to escalate to specialist skills, and how the Codex-first skill pack stays fast, focused, and token-efficient.
+This document defines how skills should route to each other, when to escalate to specialist skills, and how the Claude Code-first skill pack stays fast, focused, and token-efficient.
 
 ## Native Command Routing — Must Follow First
 
 When a native `claude-skills` command owns the job, use it instead of recreating the behavior with raw shell, generic search, or ad hoc instructions.
 
-**Token-saving rule:** the goal is to prevent noisy raw command output from entering Codex context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or the hook-provided `Rerun that as:` wrapper before noisy output is produced.
+**Token-saving rule:** the goal is to prevent noisy raw command output from entering Claude Code context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or the hook-provided `Rerun that as:` wrapper before noisy output is produced.
 
 - **Noisy shell commands:** prefer `claude-skills run -- <command>` for test, build, lint, log, status, search, Docker, Kubernetes, Terraform, package-manager, and CI-style commands. Use `claude-skills rewrite "<command>"` when unsure whether a command has native compaction.
 - **Shell-aware rewrite:** `claude-skills rewrite` understands common shell wrappers, environment prefixes, and pipelines; when it returns a `bash -lc` wrapper, run that exact wrapper instead of hand-splitting the command.
 - **Hook block-and-rerun:** if the managed `PreToolUse` hook returns `Rerun that as: <command>`, immediately run that exact command. Do not ask the user, do not treat the hook block as a task failure, and do not repeat the raw command first.
-- **Codex hook surface:** current Codex builds expose lifecycle hooks beyond `PreToolUse`, but command token saving belongs on `PreToolUse` because it runs before noisy Bash output enters context.
+- **Claude Code hook surface:** current Claude Code builds expose lifecycle hooks beyond `PreToolUse`, but command token saving belongs on `PreToolUse` because it runs before noisy Bash output enters context.
 - **Repository search:** prefer `claude-skills code-search search --workspace-root "$PWD" --query "<query>"` before raw `rg`/`grep`/`find`/`git grep`. Pipe noisy raw search through `claude-skills run --` when the scoped search is insufficient.
 - **Existing-source edits:** run or validate Preserve Existing Flow evidence first; use `claude-skills flow start`, `claude-skills flow check`, and `claude-skills flow finish`, and record the owner path in the global per-workspace flow-check artifact before patching.
 - **Commit/PR/final response text:** use `claude-skills git-workflow commit-message --from-diff`, `claude-skills git-workflow pr-body --from-diff`, and `claude-skills git-workflow lint-message <file>` against the tracked templates before submitting; run `claude-skills review pre-pr` and `claude-skills review gates check` before finalizing.
 
 ## Hook Retry Handling
 
-The managed hook may return a Codex denial whose reason begins with `Rerun that as:`. This is expected behavior, not a failure.
+The managed hook may return a Claude Code denial whose reason begins with `Rerun that as:`. This is expected behavior, not a failure.
 
 1. Copy the command after `Rerun that as:`.
 2. Run it exactly once.
@@ -58,7 +58,7 @@ Example: a raw `cargo test --workspace` may produce `Rerun that as: claude-skill
 19. **Refresh The System Map Before Blind Search**: If the scoped `SYSTEM_MAP.md` is missing, stale, contradicted by the code, or files and folders were created, deleted, moved, or renamed, refresh it first with `claude-skills memory system-map refresh` instead of scanning whole large files
 20. **Prefer Map And Doc Headers Over Blind Sweeps**: Use `SYSTEM_MAP.md` and file doc headers as the first navigation layer, then widen to exact path or symbol search only when the map is insufficient
 21. **Keep Workspace Structure In The Map**: Keep `SYSTEM_MAP.md` detailed enough for navigation by recording visible top-level folders, files, direct child structure, applications, entrypoints, main flows, and key ownership hints
-22. **Keep Navigation Global, Not Repo-Dirty**: Store `SYSTEM_MAP.md` under the scoped Codex reference directory, not in the user repository or other user-owned workspace files
+22. **Keep Navigation Global, Not Repo-Dirty**: Store `SYSTEM_MAP.md` under the scoped Claude Code reference directory, not in the user repository or other user-owned workspace files
 23. **Group Monorepos By App**: When `SYSTEM_MAP.md` covers a monorepo or multi-app workspace, group the map by app so unrelated entrypoints and downstream flows stay separated
 24. **Unknown Facts Must Stay Honest**: If the map or current analysis cannot confirm a fact, record `Not found` instead of guessing
 25. **Respect Universal Exclusions**: Keep map-building and early discovery away from dependency, build, IDE, cache, and generated artifact trees unless the user explicitly asks for them
@@ -87,7 +87,7 @@ Example: a raw `cargo test --workspace` may produce `Rerun that as: claude-skill
 48. **Real Solutions Over Plausible Workarounds**: Do not stop at a workaround that merely appears to pass. Confirm the root cause, solve the real problem, and keep scope limited to what the user asked for
 49. **Reproduce Failures Before Fixing**: When facing an error or user-reported problem, reproduce the failure first with the most direct smoke or runtime check, restate expected versus actual behavior, then trace the owner and fix the root cause
 50. **No Hardcoded Runtime Decisions**: Reject hardcoded thresholds, endpoints, environment-specific paths, rollout choices, secrets, or magic values when configuration, derivation, or existing constants are the correct source of truth
-51. **Keep Commit Bodies Professional**: When a task includes Git commit or PR body writing, keep the language professional, keep the text scoped to the actual diff, do not mention Codex or claude-skills unless the change itself is about those surfaces, and keep commit bodies in this order when the sections are needed: Problem, Solution, What Changed, Test Result
+51. **Keep Commit Bodies Professional**: When a task includes Git commit or PR body writing, keep the language professional, keep the text scoped to the actual diff, do not mention Claude Code or claude-skills unless the change itself is about those surfaces, and keep commit bodies in this order when the sections are needed: Problem, Solution, What Changed, Test Result
 52. **Hold Final Synthesis Until Closure Checks Pass**: Before the answer is presented, explicitly confirm that the named task set is done or honestly blocked, tests passed, coverage is adequate for the touched risk surface, and no partial implementation is being mislabeled as complete
 
 ## Routing Authority and Overlap Resolution
@@ -109,7 +109,7 @@ When multiple skills could plausibly apply, steer by decision ownership instead 
 - If a task spans multiple domains, keep one skill as the manager and ask other specialists for bounded input through documented skill guidance or deterministic workflow steps as appropriate.
 - If the remaining uncertainty is about business intent rather than technical implementation, do not route deeper first; clarify with the user.
 
-## Skill Ownership Map (Codex CLI)
+## Skill Ownership Map (Claude Code CLI)
 
 ```
 ┌──────────────────────────────────────┐
@@ -143,7 +143,7 @@ When multiple skills could plausibly apply, steer by decision ownership instead 
 └─────────────────────────────────────────────────────────────┘
 ```
 
-## Codex CLI Skills (13 Total)
+## Claude Code CLI Skills (13 Total)
 
 1. **software-development-life-cycle** - Full SDLC, architecture, and cross-domain coordination
 2. **preserve-existing-flow** - Brownfield ownership tracing and flow preservation
@@ -199,7 +199,7 @@ When skills compose work, follow these defaults:
 
 For non-trivial tasks, the final answer should include a compact learning snapshot when memory artifacts are available:
 
-- what Codex learned today,
+- what Claude Code learned today,
 - mistakes and tool-use mistakes encountered,
 - whether they were resolved,
 - heuristic memory-health stats such as growth or momentum.
