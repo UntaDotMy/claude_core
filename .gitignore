@@ -6,7 +6,7 @@
 # Side Effects: Hides matching untracked local files from normal Git status and add flows.
 #
 # Local workspace settings
-.codex/*
+.claude-skills/*
 .claude/
 
 # Editor folders
@@ -18,8 +18,8 @@ bin/
 dist/
 coverage.out
 *.test
-/codex-skills
-/codex-skills.exe
+/claude-skills-bin
+/claude-skills-bin.exe
 
 # Rust build artifacts
 /target/
@@ -33,7 +33,7 @@ coverage.out
 Thumbs.db
 
 # Temp, patch, and log files
-/.codex_tmp*
+/.claude_tmp*
 /.gh-*.log
 *.log
 *.tmp

@@ -2,7 +2,7 @@
   "suite_name": "claude_skills benchmark demo suite",
   "updated_at": "2026-04-07T05:33:54Z",
   "shared_harness": {
-    "harness_name": "shared_codex_workflow_benchmark",
+    "harness_name": "shared_claude_workflow_benchmark",
     "harness_version": 1,
     "current_scope": "claude_skills ships source-backed runs for the tracked scenarios here; runtime-shell comparator, workflow-teaching comparator, and swarm-automation comparator now share the same scenario contract and evidence fields through the competitive surface matrix, but the peer repos still need source-backed runs recorded under this harness.",
     "repositories": [

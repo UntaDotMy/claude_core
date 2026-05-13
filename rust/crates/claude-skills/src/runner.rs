@@ -591,7 +591,7 @@ fn run_hook_instructions(
     );
     let _ = writeln!(
         standard_output,
-        "Codex 0.130 exposes hook events including: {}.",
+        "Claude Code exposes hook events including: {}.",
         CLAUDE_HOOK_EVENTS.join(", ")
     );
     let _ = writeln!(

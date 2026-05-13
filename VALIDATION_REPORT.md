@@ -1,16 +1,16 @@
 # Skills Validation Report
 
 **Date**: 2026-03-14
-**Scope**: Codex-only audit of skill inventory, sync logic, managed install lifecycle, repo guidance, memory-report wiring, and context-efficiency policy
+**Scope**: Claude Code-only audit of skill inventory, sync logic, managed install lifecycle, repo guidance, memory-report wiring, and context-efficiency policy
 **Status**: ✅ PASS AFTER INSTALLER, CACHE-REUSE, AND AUTONOMY HARDENING
 
 ## Executive Summary
 
-The repository is now aligned as a Codex-only skill pack. The sync workflow is focused on `~/.claude`, the live home wiring protects working-brief guidance, context-efficiency policy, modular-structure preferences, and compact memory snapshots, and the install lifecycle now behaves like a managed skill-pack installation instead of a loose copy.
+The repository is now aligned as a Claude Code-only skill pack. The sync workflow is focused on `~/.claude`, the live home wiring protects working-brief guidance, context-efficiency policy, modular-structure preferences, and compact memory snapshots, and the install lifecycle now behaves like a managed skill-pack installation instead of a loose copy.
 
 ## Live Inventory Snapshot
 
-### Root Codex Skills (13)
+### Root Claude Code Skills (13)
 1. `reviewer`
 2. `software-development-life-cycle`
 3. `web-development-life-cycle`
@@ -27,24 +27,24 @@ The repository is now aligned as a Codex-only skill pack. The sync workflow is f
 
 ## What Was Verified
 
-### Root Codex Skills
-- All `13` root Codex skill directories contain `SKILL.md`
-- All `13` root Codex skill directories contain `agents/openai.yaml`
+### Root Claude Code Skills
+- All `13` root Claude Code skill directories contain `SKILL.md`
+- All `13` root Claude Code skill directories contain `agents/openai.yaml`
 - The 12 reference-backed root skill directories contain `references/`; `preserve-existing-flow` is a narrow root playbook with no extra reference files.
-- Root Codex skills remain free of legacy mirror `allowed-tools` metadata
+- Root Claude Code skills remain free of legacy mirror `allowed-tools` metadata
 - Root prompts stay aligned with current runtime and reuse policy
 - Root skill playbooks now carry explicit research-reuse and keep-iterating completion defaults
 
 ### Native Manager Logic
-- `claude-skills install` is now Codex-only and Rust-native
-- The Rust manager detects macOS, Linux, and Windows targets and resolves Codex home accurately
+- `claude-skills install` is now Claude Code-only and Rust-native
+- The Rust manager detects macOS, Linux, and Windows targets and resolves Claude Code home accurately
 - The managed runtime now uses the Rust CLI directly, so ordinary install, update, status, validate, verify, uninstall, and menu flows no longer depend on a Python launcher or Go fallback
 - The Rust manager syncs skills, root guidance, home agent TOMLs, and `memory-status-reporter` global config wiring
 - The Rust manager also mirrors the 13 skill-owned lanes into `~/.claude/agent-profiles/*.toml`, replacing the old generic default or explorer-style profile surface with specialist profiles such as `reviewer`, `preserve-existing-flow`, and `memory-status-reporter`.
 - The Rust manager tracks repo-managed installed skills so update and uninstall can prune removed skills safely
 - The `update` command now applies a repo-managed delta refresh instead of always rerunning a full pack refresh
 - The `github-update` command now fetches the tracked remote, fast-forwards safely, supports non-`origin` remotes, and rejects local-ahead branches
-- When the target Codex home has no repo-managed install yet, `update` and `github-update` now bootstrap a clean full install instead of failing mid-sync
+- When the target Claude Code home has no repo-managed install yet, `update` and `github-update` now bootstrap a clean full install instead of failing mid-sync
 - The native manager avoids shell-version-specific helpers so validation and sync still work across hosted platforms
 - Status output checks the route line, the agent block, and the injected execution-policy markers before reporting `synced`
 - Status output now reports inheritance cleanly and no longer depends on model-specific helper overrides after stale reviewer-lane files are pruned
@@ -59,7 +59,7 @@ The repository is now aligned as a Codex-only skill pack. The sync workflow is f
 - The synced `agents/*.toml` and `agent-profiles/*.toml` surfaces now wire the 13 skill-owned specialist lanes to the managed `high` reasoning baseline by default, while the local `memory-status-reporter` override can still narrow that one lane to `low` reasoning.
 
 ### Documentation
-- `README.md` is now a Codex-only setup and workflow guide
+- `README.md` is now a Claude Code-only setup and workflow guide
 - `README.md` includes setup, context-efficiency, and memory-reporting sections
 - `docs/context-efficiency-playbook.md` captures research-backed retrieval and token-efficiency guidance
 - Top-level docs no longer depend on legacy mirror inventory counts
@@ -87,7 +87,7 @@ The repository is now aligned as a Codex-only skill pack. The sync workflow is f
 - Cloud and DevOps guidance now requires explicit `alpha`, `beta`, `canary`, `release`, or `blue-green` staging, load-balancer traffic shifting where applicable, rollback ownership, evidence gates, and red-team versus blue-team readiness
 - UI and UX guidance now require stronger product-family benchmarking, brownfield stability, implementation-ready output contracts, and flow or recovery validation before claiming readiness
 - Completion guidance now requires an explicit final hold check so tasks, tests, coverage, and partial-versus-complete status are reconciled before closing
-- Windows path detection now prefers `%USERPROFILE%\\.codex` and resolves it cleanly in Git Bash via `cygpath` when present
+- Windows path detection now prefers `%USERPROFILE%\\.claude-skills` and resolves it cleanly in Git Bash via `cygpath` when present
 - Windows install, update, verify, and uninstall are callable from PowerShell through the native `claude-skills.exe`
 
 ## Evidence Snapshot (Non-Score)
@@ -123,8 +123,8 @@ Run from the repo root on Windows PowerShell:
 ```powershell
 cargo run --bin claude-skills -- validate --profile smoke
 cargo run --bin claude-skills -- install --repo-root .
-& "$env:USERPROFILE\.codex\claude-skills.exe" update
-& "$env:USERPROFILE\.codex\claude-skills.exe" status
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" update
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
 ```
 
 Optional verification or uninstall:
@@ -136,8 +136,8 @@ Optional verification or uninstall:
 
 ## Current Conclusion
 
-- Codex inventory: accurate and complete at `13` skills
-- Sync scope: Codex-only and focused on `~/.claude`
+- Claude Code inventory: accurate and complete at `13` skills
+- Sync scope: Claude Code-only and focused on `~/.claude`
 - Install lifecycle: managed install metadata, tracked repo-managed skills, explicit uninstall, and delta updates are now in place
 - Context-efficiency policy: documented, validator-backed, and wired into live config
 - Research reuse and autonomy policy: documented across root docs, every skill playbook, runtime prompts, and synced home guidance

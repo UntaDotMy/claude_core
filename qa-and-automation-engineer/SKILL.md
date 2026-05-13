@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide QA strategy, automation, reproducibility, release reliability, and regression prevention.
-Caller: Codex agents handling tests, validation, failure triage, release gates, or automation design.
+Caller: Claude Code agents handling tests, validation, failure triage, release gates, or automation design.
 Dependencies: Risk surface, reproduction evidence, test harnesses, validation results, and QA references.
 Main Functions: Define coverage defaults, mandatory test ladder, failure triage, and release-gate proof.
 Side Effects: Shapes validation plans, test implementation guidance, and readiness decisions.
@@ -205,8 +205,8 @@ Never over-claim confidence in these situations:
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `codex.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
+- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
 

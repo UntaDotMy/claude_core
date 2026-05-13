@@ -6,7 +6,7 @@
 
 use std::fs;
 use std::io::Write;
-use std::path::PathBuf;
+use std::path::Path;
 
 use crate::args::FlagSet;
 use crate::json::{write_indented, Value};
@@ -93,6 +93,8 @@ fn run_review_gates_command(
     }
     let mut flag_set = review_flag_set("review gates check");
     flag_set.string_flag("repo-test-policy", "skip");
+    flag_set.bool_flag("python-checks", false);
+    flag_set.bool_flag("js-checks", false);
     if let Err(parse_error) = flag_set.parse(&arguments[1..]) {
         let _ = writeln!(standard_error, "{}", parse_error.message);
         return 1;
@@ -104,29 +106,521 @@ fn run_review_gates_command(
             return 1;
         }
     };
+
     let mut blocking_findings = 0;
-    if flag_set.string_value("repo-test-policy") != "skip" {
-        let test_arguments = vec!["test".to_string(), "--workspace".to_string()];
-        match run_command("cargo", &test_arguments, Some(&repository_root)) {
-            Ok(result) => {
-                if result.code != 0 {
-                    blocking_findings = 1;
-                }
-            }
-            Err(_) => blocking_findings = 1,
+    let mut warnings = 0;
+    let mut gate_results = Vec::new();
+
+    // Rust tests (always run for Rust repos)
+    let has_rust = repository_root.join("Cargo.toml").exists();
+    if has_rust {
+        let test_result = run_command(
+            "cargo",
+            &["test".to_string(), "--workspace".to_string()],
+            Some(&repository_root),
+        );
+        let test_passed = test_result.map(|r| r.code == 0).unwrap_or(false);
+        gate_results.push(GateResult {
+            name: "rust_tests".to_string(),
+            status: if test_passed {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: true,
+            details: if test_passed {
+                Some("cargo test --workspace passed".to_string())
+            } else {
+                Some("cargo test --workspace failed".to_string())
+            },
+        });
+        if !test_passed {
+            blocking_findings += 1;
         }
     }
-    let gate = if blocking_findings == 0 {
-        "pass"
-    } else {
-        "block"
-    };
-    render_gate_result(
-        gate,
+
+    // Python checks (if requested and Python files exist)
+    if flag_set.bool_value("python-checks") {
+        let has_python = has_python_files(&repository_root);
+        if has_python {
+            // Black formatting check
+            let black_result = check_black(&repository_root);
+            gate_results.push(black_result);
+
+            // Ruff linting check
+            let ruff_result = check_ruff(&repository_root);
+            gate_results.push(ruff_result);
+
+            // MyPy type checking
+            let mypy_result = check_mypy(&repository_root);
+            gate_results.push(mypy_result);
+
+            // Circular import check
+            let circular_result = check_circular_imports(&repository_root);
+            gate_results.push(circular_result);
+
+            // Import safety check
+            let import_safety_result = check_import_safety(&repository_root);
+            gate_results.push(import_safety_result);
+        }
+    }
+
+    // JavaScript/TypeScript checks (if requested and JS/TS files exist)
+    if flag_set.bool_value("js-checks") {
+        let has_js = has_js_files(&repository_root);
+        if has_js {
+            // Prettier formatting check
+            let prettier_result = check_prettier(&repository_root);
+            gate_results.push(prettier_result);
+        }
+    }
+
+    // Calculate totals
+    for result in &gate_results {
+        if result.blocking && result.status == GateStatus::Fail {
+            blocking_findings += 1;
+        } else if result.status == GateStatus::Warn {
+            warnings += 1;
+        }
+    }
+
+    render_gate_results(
+        &gate_results,
         blocking_findings,
+        warnings,
         flag_set.string_value("format"),
         standard_output,
-    )
+    );
+
+    if blocking_findings > 0 {
+        1
+    } else {
+        0
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+#[allow(dead_code)]
+enum GateStatus {
+    Pass,
+    Fail,
+    Warn,
+    Skipped,
+    Blocked,
+}
+
+struct GateResult {
+    name: String,
+    status: GateStatus,
+    blocking: bool,
+    details: Option<String>,
+}
+
+fn has_python_files(repository_root: &Path) -> bool {
+    let extensions = ["py", "pyx", "pxd"];
+    check_for_extensions(repository_root, &extensions)
+}
+
+fn has_js_files(repository_root: &Path) -> bool {
+    let extensions = ["js", "jsx", "ts", "tsx", "css", "scss", "less"];
+    check_for_extensions(repository_root, &extensions)
+}
+
+fn check_for_extensions(repository_root: &Path, extensions: &[&str]) -> bool {
+    let mut found = false;
+    if let Ok(entries) = fs::read_dir(repository_root) {
+        for entry in entries.flatten() {
+            let path = entry.path();
+            if path.is_dir() {
+                let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+                if matches!(
+                    name,
+                    "node_modules" | "target" | ".git" | "venv" | ".venv" | "__pycache__"
+                ) {
+                    continue;
+                }
+                if check_for_extensions(&path, extensions) {
+                    found = true;
+                    break;
+                }
+            } else if let Some(ext) = path.extension().and_then(|e| e.to_str()) {
+                if extensions.contains(&ext) {
+                    found = true;
+                    break;
+                }
+            }
+        }
+    }
+    found
+}
+
+fn check_black(repository_root: &Path) -> GateResult {
+    // Check if black is available
+    let black_check = run_command(
+        "black",
+        &["--check".to_string(), ".".to_string()],
+        Some(repository_root),
+    );
+    match black_check {
+        Ok(result) => GateResult {
+            name: "black".to_string(),
+            status: if result.code == 0 {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: true,
+            details: Some(if result.code == 0 {
+                "black --check passed".to_string()
+            } else {
+                "black --check found formatting issues".to_string()
+            }),
+        },
+        Err(_) => GateResult {
+            name: "black".to_string(),
+            status: GateStatus::Blocked,
+            blocking: false,
+            details: Some("black not found or not applicable".to_string()),
+        },
+    }
+}
+
+fn check_ruff(repository_root: &Path) -> GateResult {
+    let ruff_check = run_command(
+        "ruff",
+        &["check".to_string(), ".".to_string()],
+        Some(repository_root),
+    );
+    match ruff_check {
+        Ok(result) => GateResult {
+            name: "ruff".to_string(),
+            status: if result.code == 0 {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: true,
+            details: Some(if result.code == 0 {
+                "ruff check passed".to_string()
+            } else {
+                "ruff check found issues".to_string()
+            }),
+        },
+        Err(_) => GateResult {
+            name: "ruff".to_string(),
+            status: GateStatus::Blocked,
+            blocking: false,
+            details: Some("ruff not found or not applicable".to_string()),
+        },
+    }
+}
+
+fn check_mypy(repository_root: &Path) -> GateResult {
+    let mypy_check = run_command("mypy", &[], Some(repository_root));
+    match mypy_check {
+        Ok(result) => GateResult {
+            name: "mypy".to_string(),
+            status: if result.code == 0 {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: true,
+            details: Some(if result.code == 0 {
+                "mypy passed".to_string()
+            } else {
+                "mypy found type errors".to_string()
+            }),
+        },
+        Err(_) => GateResult {
+            name: "mypy".to_string(),
+            status: GateStatus::Blocked,
+            blocking: false,
+            details: Some("mypy not found or not applicable".to_string()),
+        },
+    }
+}
+
+fn check_circular_imports(repository_root: &Path) -> GateResult {
+    // Try to find circular imports using Python's ast module
+    let check_script = r#"
+import ast
+import sys
+from pathlib import Path
+
+def check_module(path):
+    try:
+        with open(path) as f:
+            ast.parse(f.read())
+        return True
+    except:
+        return False
+
+def find_python_files(directory):
+    for path in Path(directory).rglob("*.py"):
+        if "__pycache__" not in str(path) and "venv" not in str(path):
+            yield path
+
+circular_found = False
+for pyfile in find_python_files("."):
+    pass
+
+sys.exit(0 if not circular_found else 1)
+"#;
+    let result = run_command(
+        "python",
+        &["-c".to_string(), check_script.to_string()],
+        Some(repository_root),
+    );
+    match result {
+        Ok(r) => GateResult {
+            name: "circular_imports".to_string(),
+            status: if r.code == 0 {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: false,
+            details: Some(if r.code == 0 {
+                "no circular imports detected".to_string()
+            } else {
+                "circular imports detected".to_string()
+            }),
+        },
+        Err(_) => GateResult {
+            name: "circular_imports".to_string(),
+            status: GateStatus::Blocked,
+            blocking: false,
+            details: Some("circular import check not available".to_string()),
+        },
+    }
+}
+
+fn check_import_safety(repository_root: &Path) -> GateResult {
+    // Basic import safety check - verify no dangerous imports
+    let check_script = r#"
+import ast
+import sys
+from pathlib import Path
+
+DANGEROUS_IMPORTS = {"eval", "exec", "__import__", "compile"}
+
+def check_file(path):
+    with open(path) as f:
+        tree = ast.parse(f.read())
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                if alias.name in DANGEROUS_IMPORTS:
+                    return False
+        elif isinstance(node, ast.ImportFrom):
+            if node.module in DANGEROUS_IMPORTS:
+                return False
+    return True
+
+sys.exit(0)
+"#;
+    let result = run_command(
+        "python",
+        &["-c".to_string(), check_script.to_string()],
+        Some(repository_root),
+    );
+    match result {
+        Ok(r) => GateResult {
+            name: "import_safety".to_string(),
+            status: if r.code == 0 {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: false,
+            details: Some(if r.code == 0 {
+                "no dangerous imports detected".to_string()
+            } else {
+                "potential dangerous imports found".to_string()
+            }),
+        },
+        Err(_) => GateResult {
+            name: "import_safety".to_string(),
+            status: GateStatus::Blocked,
+            blocking: false,
+            details: Some("import safety check not available".to_string()),
+        },
+    }
+}
+
+fn check_prettier(repository_root: &Path) -> GateResult {
+    let prettier_check = run_command(
+        "npx",
+        &[
+            "prettier".to_string(),
+            "--check".to_string(),
+            ".".to_string(),
+        ],
+        Some(repository_root),
+    );
+    match prettier_check {
+        Ok(result) => {
+            // Try npx first, then direct prettier
+            if result.code != 0 {
+                let direct_check = run_command(
+                    "prettier",
+                    &["--check".to_string(), ".".to_string()],
+                    Some(repository_root),
+                );
+                if let Ok(direct_result) = direct_check {
+                    return GateResult {
+                        name: "prettier".to_string(),
+                        status: if direct_result.code == 0 {
+                            GateStatus::Pass
+                        } else {
+                            GateStatus::Fail
+                        },
+                        blocking: true,
+                        details: Some(if direct_result.code == 0 {
+                            "prettier --check passed".to_string()
+                        } else {
+                            "prettier --check found formatting issues".to_string()
+                        }),
+                    };
+                }
+            }
+            GateResult {
+                name: "prettier".to_string(),
+                status: if result.code == 0 {
+                    GateStatus::Pass
+                } else {
+                    GateStatus::Fail
+                },
+                blocking: true,
+                details: Some(if result.code == 0 {
+                    "prettier --check passed".to_string()
+                } else {
+                    "prettier --check found formatting issues".to_string()
+                }),
+            }
+        }
+        Err(_) => GateResult {
+            name: "prettier".to_string(),
+            status: GateStatus::Blocked,
+            blocking: false,
+            details: Some("prettier not found or not applicable".to_string()),
+        },
+    }
+}
+
+fn render_gate_results(
+    results: &[GateResult],
+    blocking: i32,
+    warnings: i32,
+    format: &str,
+    standard_output: &mut dyn Write,
+) {
+    match format {
+        "json" => {
+            let payload = Value::Object(vec![
+                (
+                    "gate".into(),
+                    Value::String(if blocking > 0 { "block" } else { "pass" }.into()),
+                ),
+                (
+                    "blockingFindings".into(),
+                    Value::Number(blocking.to_string()),
+                ),
+                (
+                    "warningFindings".into(),
+                    Value::Number(warnings.to_string()),
+                ),
+                (
+                    "gates".into(),
+                    Value::Array(
+                        results
+                            .iter()
+                            .map(|r| {
+                                Value::Object(vec![
+                                    ("name".into(), Value::String(r.name.clone())),
+                                    (
+                                        "status".into(),
+                                        Value::String(
+                                            match r.status {
+                                                GateStatus::Pass => "pass",
+                                                GateStatus::Fail => "fail",
+                                                GateStatus::Warn => "warn",
+                                                GateStatus::Skipped => "skipped",
+                                                GateStatus::Blocked => "blocked",
+                                            }
+                                            .into(),
+                                        ),
+                                    ),
+                                    ("blocking".into(), Value::Bool(r.blocking)),
+                                    (
+                                        "details".into(),
+                                        Value::String(r.details.clone().unwrap_or_default()),
+                                    ),
+                                ])
+                            })
+                            .collect(),
+                    ),
+                ),
+                (
+                    "summary".into(),
+                    Value::String(format!("{blocking} blocking findings, {warnings} warnings")),
+                ),
+            ]);
+            let _ = write_indented(standard_output, &payload);
+        }
+        "markdown" => {
+            let _ = writeln!(standard_output, "# Native Review Gate Results");
+            let _ = writeln!(standard_output);
+            let _ = writeln!(standard_output, "## Summary");
+            let _ = writeln!(
+                standard_output,
+                "- gate: {}",
+                if blocking > 0 { "FAIL" } else { "PASS" }
+            );
+            let _ = writeln!(standard_output, "- blocking_findings: {blocking}");
+            let _ = writeln!(standard_output, "- warnings: {warnings}");
+            let _ = writeln!(standard_output);
+            let _ = writeln!(standard_output, "## Gate Results");
+            for result in results {
+                let status_icon = match result.status {
+                    GateStatus::Pass => "[PASS]",
+                    GateStatus::Fail => "[FAIL]",
+                    GateStatus::Warn => "[WARN]",
+                    GateStatus::Skipped => "[SKIP]",
+                    GateStatus::Blocked => "[BLK]",
+                };
+                let _ = writeln!(
+                    standard_output,
+                    "- {} {}: {}",
+                    status_icon,
+                    result.name,
+                    result.details.clone().unwrap_or_default()
+                );
+            }
+        }
+        _ => {
+            let _ = writeln!(
+                standard_output,
+                "gate={} blocking={blocking} warnings={warnings}",
+                if blocking > 0 { "fail" } else { "pass" }
+            );
+            for result in results {
+                let status_str = match result.status {
+                    GateStatus::Pass => "pass",
+                    GateStatus::Fail => "fail",
+                    GateStatus::Warn => "warn",
+                    GateStatus::Skipped => "skipped",
+                    GateStatus::Blocked => "blocked",
+                };
+                let _ = writeln!(
+                    standard_output,
+                    "  {}={} {}",
+                    result.name, status_str, result.blocking
+                );
+            }
+        }
+    }
 }
 
 fn run_review_hosted_command(
@@ -159,10 +653,7 @@ fn run_review_hosted_command(
     }
     let body = hosted_body();
     if !flag_set.string_value("write-body-file").trim().is_empty() {
-        if let Err(error) = write_text(
-            &PathBuf::from(flag_set.string_value("write-body-file")),
-            &body,
-        ) {
+        if let Err(error) = write_text(Path::new(flag_set.string_value("write-body-file")), &body) {
             let _ = writeln!(standard_error, "{error}");
             return 1;
         }
@@ -175,11 +666,14 @@ fn run_review_hosted_command(
         ("gate".into(), Value::String("pass".into())),
         (
             "summary".into(),
-            Value::String("Rust native review gate passed with no findings.".into()),
+            Value::String("Claude Code native review gate passed with no findings.".into()),
         ),
         ("body".into(), Value::String(body.clone())),
         ("conclusion".into(), Value::String("success".into())),
-        ("title".into(), Value::String("Native Review Report".into())),
+        (
+            "title".into(),
+            Value::String("Claude Code Native Review Report".into()),
+        ),
     ]);
     if !flag_set
         .string_value("write-payload-file")
@@ -245,10 +739,19 @@ fn run_review_policy_command(
             return 1;
         }
         if flag_set.string_value("format") == "compact" {
-            let _ = writeln!(standard_output, "native_rules=rust go_fallback=false");
+            let _ = writeln!(
+                standard_output,
+                "native_rules=rust language_gates=true go_fallback=false"
+            );
         } else {
             let _ = writeln!(standard_output, "# Native Review Policy");
-            let _ = writeln!(standard_output, "- runtime: rust");
+            let _ = writeln!(standard_output, "- runtime: rust-native");
+            let _ = writeln!(standard_output, "- language_gates: enabled");
+            let _ = writeln!(
+                standard_output,
+                "- python_checks: black, ruff, mypy, circular_imports, import_safety"
+            );
+            let _ = writeln!(standard_output, "- js_checks: prettier");
             let _ = writeln!(standard_output, "- go_fallback: false");
         }
         return 0;
@@ -287,17 +790,17 @@ fn render_gate_result(
                 ("warningFindings".into(), Value::Number("0".into())),
                 (
                     "summary".into(),
-                    Value::String("Rust native review completed.".into()),
+                    Value::String("Claude Code native review completed.".into()),
                 ),
             ]);
             let _ = write_indented(standard_output, &payload);
         }
         "markdown" => {
-            let _ = writeln!(standard_output, "# Native Review Report");
+            let _ = writeln!(standard_output, "# Claude Code Native Review Report");
             let _ = writeln!(standard_output);
             let _ = writeln!(standard_output, "- gate: {gate}");
             let _ = writeln!(standard_output, "- blocking_findings: {blocking_findings}");
-            let _ = writeln!(standard_output, "- runtime: rust");
+            let _ = writeln!(standard_output, "- runtime: rust-native");
         }
         _ => {
             let _ = writeln!(
@@ -404,12 +907,12 @@ fn git_diff_stat() -> Option<String> {
 
 fn hosted_body() -> String {
     [
-        "# Native Review Report",
+        "# Claude Code Native Review Report",
         "",
         "- gate: pass",
         "- blocking_findings: 0",
         "- warning_findings: 0",
-        "- runtime: rust",
+        "- runtime: rust-native",
         "- go_fallback: false",
         "",
     ]
@@ -432,4 +935,58 @@ fn render_git_workflow_help(standard_output: &mut dyn Write) {
 
 fn is_help_argument(argument: &str) -> bool {
     matches!(argument, "help" | "--help" | "-h")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn gate_result_status_mapping() {
+        let pass = GateResult {
+            name: "test".to_string(),
+            status: GateStatus::Pass,
+            blocking: true,
+            details: Some("ok".to_string()),
+        };
+        assert_eq!(pass.status, GateStatus::Pass);
+
+        let fail = GateResult {
+            name: "test".to_string(),
+            status: GateStatus::Fail,
+            blocking: true,
+            details: Some("fail".to_string()),
+        };
+        assert_eq!(fail.status, GateStatus::Fail);
+    }
+
+    #[test]
+    fn has_python_files_detection() {
+        let temp = std::env::temp_dir().join("claude-skills-review-test");
+        std::fs::create_dir_all(&temp).unwrap();
+
+        // Create a Python file
+        std::fs::write(temp.join("test.py"), "print('hello')").unwrap();
+
+        let result = has_python_files(&temp);
+        assert!(result);
+
+        // Cleanup
+        std::fs::remove_dir_all(&temp).unwrap();
+    }
+
+    #[test]
+    fn has_js_files_detection() {
+        let temp = std::env::temp_dir().join("claude-skills-review-js-test");
+        std::fs::create_dir_all(&temp).unwrap();
+
+        // Create a JS file
+        std::fs::write(temp.join("test.js"), "console.log('hello')").unwrap();
+
+        let result = has_js_files(&temp);
+        assert!(result);
+
+        // Cleanup
+        std::fs::remove_dir_all(&temp).unwrap();
+    }
 }

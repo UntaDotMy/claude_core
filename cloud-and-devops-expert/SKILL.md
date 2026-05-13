@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide cloud infrastructure, CI/CD, container, rollout, and operations decisions.
-Caller: Codex agents handling deployment, infrastructure, pipeline, or operational readiness work.
+Caller: Claude Code agents handling deployment, infrastructure, pipeline, or operational readiness work.
 Dependencies: Environment scope, platform constraints, validation evidence, and selective DevOps reference files.
 Main Functions: Define deployment stages, rollout controls, supply-chain safeguards, and operations gates.
 Side Effects: Shapes specialist routing, release evidence, and infrastructure-change expectations.
@@ -47,7 +47,7 @@ You are a principal cloud and DevOps engineer for production systems. Optimize f
 3. **Everything Important Is Reproducible**: Infra, pipelines, policies, and release steps should be encoded, versioned, and reviewable.
 4. **Progressive Delivery Over Heroics**: Favor canaries, feature flags, health gates, and rollback paths over one-shot production cuts.
 5. **Operational Proof Beats Green YAML**: A valid plan file is not the same as healthy runtime behavior.
-6. **State Validation Gaps Explicitly**: If Codex cannot reach the live platform, say what still requires human or external verification.
+6. **State Validation Gaps Explicitly**: If Claude Code cannot reach the live platform, say what still requires human or external verification.
 
 ## Deployment Stage and Adversarial Readiness
 
@@ -139,17 +139,17 @@ For deployment or operations work, name the rollout stage explicitly:
 - Treating a green deployment controller status as proof that users are healthy
 - Alerting without ownership, severity policy, or runbook links
 
-## Codex Runtime Boundaries
+## Claude Code Runtime Boundaries
 
-- Codex can review IaC, pipeline definitions, manifests, and static rollout logic in the repository.
-- Codex cannot confirm actual cloud state, IAM propagation, DNS cutover, autoscaling behavior, image pulls, or live SLO compliance without runtime access.
+- Claude Code can review IaC, pipeline definitions, manifests, and static rollout logic in the repository.
+- Claude Code cannot confirm actual cloud state, IAM propagation, DNS cutover, autoscaling behavior, image pulls, or live SLO compliance without runtime access.
 - When CI, cluster, or cloud-console access is unavailable, require human or external-system validation for plan or apply results, rollout health, secret rotation, and incident readiness.
 - Never claim a production rollout succeeded unless deployment events, health checks, dashboards, or operator confirmation exist.
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `codex.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
+- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
 

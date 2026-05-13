@@ -129,7 +129,7 @@ pub fn run_proxy(
                 compact_path: std::path::PathBuf::new(),
                 agent: std::env::var("CLAUDE_SKILLS_AGENT")
                     .or_else(|_| std::env::var("CLAUDE_AGENT"))
-                    .unwrap_or_else(|_| "codex".to_string()),
+                    .unwrap_or_else(|_| "claude-code".to_string()),
                 workspace: cwd.clone(),
                 stdout_bytes: result.stdout.len(),
                 stderr_bytes: result.stderr.len(),

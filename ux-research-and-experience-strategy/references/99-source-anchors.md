@@ -43,7 +43,7 @@
 
 ## Skill Build Guidance
 
-- OpenAI Codex Skills docs: https://developers.openai.com/codex/skills#create-a-skill
+- Claude Code hooks docs: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/hooks
 
 ## Notes
 

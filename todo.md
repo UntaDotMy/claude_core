@@ -12,7 +12,7 @@ This roadmap resets the repo around global startup context and navigation qualit
 ## Native Startup Context
 
 - [x] Expose a canonical project-scoped global `SYSTEM_MAP.md` target through the native memory scope.
-- [x] Keep `SYSTEM_MAP.md` under Codex-global project-scoped storage, not inside the user workspace.
+- [x] Keep `SYSTEM_MAP.md` under Claude Code-global project-scoped storage, not inside the user workspace.
 - [x] Make the default startup flow read scoped memory plus `SYSTEM_MAP.md` before broad repository exploration.
 - [x] Add a native `claude-skills memory system-map refresh` command so the scoped map can be refreshed without ad hoc repo scanning.
 
@@ -56,7 +56,7 @@ Goal: Implement external-reducer-like command-output compaction natively in clau
 - [x] Analyze current command_compaction.go implementation gaps vs external reducer tools
 - [x] Expand command filters to cover 50+ commands (broad command coverage)
 - [x] Implement token savings analytics (savings-dashboard gain dashboard)
-- [x] Implement native hook installation for Codex CLI
+- [x] Implement native hook installation for Claude Code
 - [x] Update AGENTS.md and docs with external benchmark guidance
 - [x] Fix FilterRegistry disconnection - make all filters functional
 - [x] Add missing git commands (push/pull/fetch)
@@ -65,7 +65,7 @@ Goal: Implement external-reducer-like command-output compaction natively in clau
 ## Pending
 
 - [x] Implement transparent command rewriting (`claude-skills rewrite` and the managed hook provide native command-family rewrites through `claude-skills run --`)
-- [ ] Implement transparent hook rewrite (Codex `PreToolUse` currently supports deny-and-rerun instead of transparent substitution)
+- [ ] Implement transparent hook rewrite (Claude Code `PreToolUse` currently supports deny-and-rerun instead of transparent substitution)
 - [x] Clean up dead code and consolidate
 - [x] Add exit code propagation to filters
 - [x] Add native hook integration for noisy command rerun guidance
@@ -94,13 +94,13 @@ Goal: Make the open token-proxy PR satisfy the capture-first model: command ente
 - [x] Persist compact output and updated metadata beside raw stdout/stderr.
 - [x] Record token-based compaction events with `tokensBefore`, `tokensAfter`, `tokensSaved`, `adapterName`, `rawPath`, `compactPath`, `agent`, and `workspace`.
 - [x] Update `gain` to report token totals and top token savers instead of presenting byte counters as tokens.
-- [x] Expand `doctor` checks for Codex binary presence, `codex_hooks = true`, hooks file presence, PreToolUse Bash matcher, rerun wrapper installation, and unified-exec warning.
+- [x] Expand `doctor` checks for Claude Code binary presence, `claude_hooks = true`, hooks file presence, PreToolUse Bash matcher, rerun wrapper installation, and unified-exec warning.
 - [x] Add doc headers to new proxy and adapter source files.
 
 ## Still Pending
 
 - [ ] Finish the full adapter matrix: search/read/list (`rg`, `grep`, `find`, `tree`, `ls -R`, large `cat`, `sed`, `head`, `tail`, `jq`), build/lint/log/infra (`tsc`, `eslint`, `ruff`, `mypy`, `cargo clippy`, `cargo build`, Docker, Kubernetes, Terraform, AWS logs).
-- [ ] Add `claude-skills discover` to scan Codex transcripts/logs for large raw command output that bypassed the proxy and emit missed-savings fixes.
+- [ ] Add `claude-skills discover` to scan Claude Code transcripts/logs for large raw command output that bypassed the proxy and emit missed-savings fixes.
 - [ ] Add optional YAML/TOML project filters layered after built-in Rust adapters, without replacing structured parsers for tests, diffs, JSON, and compiler errors.
-- [ ] Split hook integration files into dedicated host modules (`hooks/codex.rs`, `hooks/claude.rs`, `hooks/cursor.rs`, `hooks/windsurf.rs`) once host-specific behavior exists.
+- [x] Split hook integration files into dedicated host modules (`hooks/claude.rs`, `hooks/cursor.rs`, `hooks/windsurf.rs`) once host-specific behavior exists.
 - [ ] Add focused regression tests and fixtures for passing and failing outputs across the Tier 1 test runners and Git diff/status reducers.

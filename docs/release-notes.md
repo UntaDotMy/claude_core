@@ -3,7 +3,7 @@
 `claude_skills` release notes are meant to explain three things clearly:
 
 - what changed in the release
-- why the release matters to operators using Codex day to day
+- why the release matters to operators using Claude Code day to day
 - what proof bar the release passed before it was published
 
 ## What a release note should contain

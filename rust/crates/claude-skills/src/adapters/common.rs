@@ -173,6 +173,7 @@ pub fn merge_streams(stdout: &[u8], stderr: &[u8]) -> String {
 }
 
 /// Collapse consecutive identical lines into a single line with a repetition count.
+/// Also deduplicates non-consecutive progress/status lines that repeat frequently.
 /// e.g. "done\ndone\ndone" -> "done (3x)"
 pub fn dedup_lines(text: &str) -> String {
     let mut result = String::new();

@@ -10,7 +10,7 @@ use regex::Regex;
 
 #[derive(Debug, Clone, Default, Copy)]
 pub struct LintOptions {
-    pub allow_codex_integration: bool,
+    pub allow_claude_code_integration: bool,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -28,10 +28,10 @@ fn first_person_pattern() -> &'static Regex {
     })
 }
 
-fn codex_or_ai_pattern() -> &'static Regex {
+fn ai_tool_pattern() -> &'static Regex {
     static PATTERN: OnceLock<Regex> = OnceLock::new();
     PATTERN.get_or_init(|| {
-        Regex::new(r"(?i)\b(ai|codex|chatgpt|assistant)\b").expect("codex_or_ai pattern compiles")
+        Regex::new(r"(?i)\b(ai|assistant|llm|model)\b").expect("ai_tool pattern compiles")
     })
 }
 
@@ -80,12 +80,12 @@ pub fn lint_message(message_text: &str, options: LintOptions) -> Vec<Finding> {
             message: "Avoid chatty wording; keep the message professional and diff-focused.".into(),
         });
     }
-    if !options.allow_codex_integration && codex_or_ai_pattern().is_match(trimmed_message) {
+    if !options.allow_claude_code_integration && ai_tool_pattern().is_match(trimmed_message) {
         findings.push(Finding {
             id: "unrelated-ai-wording".into(),
             severity: "high".into(),
             message:
-                "Avoid AI or Codex wording unless the change is literally about Codex integration."
+                "Avoid AI or tool wording unless the change is literally about Claude Code integration."
                     .into(),
         });
     }
@@ -111,7 +111,7 @@ mod tests {
     #[test]
     fn lint_message_rejects_chatty_and_ai_markers() {
         let findings = lint_message(
-            "I made a robust fix. Thanks, please review. Codex did this.\\nTests passed.",
+            "I made a robust fix. Thanks, please review. The AI did this.\\nTests passed.",
             LintOptions::default(),
         );
         let seen: std::collections::HashSet<&str> =
@@ -144,11 +144,11 @@ mod tests {
     }
 
     #[test]
-    fn lint_message_allows_codex_when_integration_is_explicit() {
+    fn lint_message_allows_claude_code_when_integration_is_explicit() {
         let findings = lint_message(
-            "What Changed\n- Codex hook guidance now states current runtime limits.",
+            "What Changed\n- Claude Code hook guidance now states current runtime limits.",
             LintOptions {
-                allow_codex_integration: true,
+                allow_claude_code_integration: true,
             },
         );
         assert!(

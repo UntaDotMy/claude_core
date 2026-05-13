@@ -7,13 +7,13 @@ Use these sources to support up-to-date, evidence-backed review feedback.
 - Google Engineering Practices (code review): https://google.github.io/eng-practices/review/reviewer/
 - Scrum Guide (official): https://scrumguides.org/download
 - Agile Alliance YAGNI: https://agilealliance.org/glossary/yagni/
-- OpenAI Codex Skills docs: https://developers.openai.com/codex/skills#create-a-skill
-- OpenAI Codex CLI slash commands: https://developers.openai.com/codex/cli#slash-commands
-- OpenAI Codex changelog: https://developers.openai.com/codex/changelog
-- OpenAI Codex release 0.111.0 notes: https://github.com/openai/codex/releases/tag/rust-v0.111.0
-- Codex js_repl documentation (repo): https://raw.githubusercontent.com/openai/codex/main/docs/js_repl.md
-- Codex feature registry (repo): https://raw.githubusercontent.com/openai/codex/main/codex-rs/core/src/features.rs
-- Codex js_repl minimum Node version: https://raw.githubusercontent.com/openai/codex/main/codex-rs/node-version.txt
+- Claude Code hooks docs: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/hooks
+- Claude Code slash commands: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/cli-usage
+- Claude Code changelog: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/changelog
+
+- (removed: js_repl is not part of Claude Code)
+- (removed: not part of Claude Code)
+- (removed: js_repl is not part of Claude Code)
 
 ## Requirements and PRD References
 

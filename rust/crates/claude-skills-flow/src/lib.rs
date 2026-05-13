@@ -14,7 +14,7 @@ use serde::{Deserialize, Serialize};
 pub const SCHEMA_VERSION: u32 = 1;
 pub const DEFAULT_ARTIFACT_PATH: &str = "";
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
 pub struct Check {
     #[serde(default)]
     pub version: u32,
@@ -70,34 +70,6 @@ pub struct Check {
     pub generated_only: bool,
     #[serde(default, skip_serializing_if = "is_false")]
     pub greenfield: bool,
-}
-
-impl Default for Check {
-    fn default() -> Self {
-        Self {
-            version: 0,
-            task: String::new(),
-            target_file: String::new(),
-            target_function: String::new(),
-            current_behavior: String::new(),
-            entry_point: String::new(),
-            producer: String::new(),
-            source_of_truth: String::new(),
-            storage_state_queue_owner: String::new(),
-            side_effect_owner: String::new(),
-            consumers: Vec::new(),
-            cleanup_recovery_path: String::new(),
-            edit_boundary: String::new(),
-            validation_needed: Vec::new(),
-            validation_evidence: Vec::new(),
-            duplicate_owner_logic: false,
-            migration_approved: false,
-            docs_only: false,
-            formatting_only: false,
-            generated_only: false,
-            greenfield: false,
-        }
-    }
 }
 
 fn is_false(boolean_value: &bool) -> bool {
@@ -387,7 +359,7 @@ fn clean_path(raw_path: &Path) -> PathBuf {
     } else {
         original_string.as_ref()
     };
-    for raw_segment in path_body.split(|character: char| character == '/' || character == '\\') {
+    for raw_segment in path_body.split(['/', '\\']) {
         if raw_segment.is_empty() || raw_segment == "." {
             continue;
         }

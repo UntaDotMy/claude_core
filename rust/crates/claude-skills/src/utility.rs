@@ -400,7 +400,7 @@ pub fn run_session_command(
     }
 
     // Sort by timestamp ascending
-    events.sort_by(|left, right| left.timestamp.cmp(&right.timestamp));
+    events.sort_by_key(|left| left.timestamp);
 
     // Group into sessions (30-minute gap = new session)
     let session_gap_secs: u64 = 30 * 60;
@@ -573,7 +573,7 @@ pub fn run_session_command(
             let _ = writeln!(
                 standard_output,
                 " {:<11} {:>8} {:>8} {:>8} {:>8} {:>6.1}% {:>9}",
-                format_args!("{}-{}", start_time, end_time),
+                format!("{}-{}", start_time, end_time),
                 session.commands,
                 format_count(session.tokens_saved),
                 format_count(session.tokens_before),
@@ -770,7 +770,7 @@ pub fn run_bench_command(
                         "bounded streaming",
                         "raw-output recovery",
                         "persisted gain analytics",
-                        "Codex lifecycle hook integration",
+                        "Claude Code lifecycle hook integration",
                     ]
                     .iter()
                     .map(|feature| Value::String((*feature).into()))
@@ -1106,7 +1106,7 @@ fn discover_missed_savings(min_tokens: usize, limit: usize) -> Vec<MissedSaving>
             break;
         }
     }
-    misses.sort_by(|left, right| right.tokens.cmp(&left.tokens));
+    misses.sort_by_key(|right| std::cmp::Reverse(right.tokens));
     misses.truncate(limit);
     misses
 }
@@ -1467,7 +1467,7 @@ fn render_system_map(workspace_root: &Path) -> String {
         "# SYSTEM_MAP".to_string(),
         String::new(),
         format!("- workspace_root: {}", display_path(workspace_root)),
-        "- storage: Codex-global per-workspace reference lane".to_string(),
+        "- storage: Claude Code-global per-workspace reference lane".to_string(),
         "- runtime: rust".to_string(),
         "- go_fallback: false".to_string(),
         String::new(),

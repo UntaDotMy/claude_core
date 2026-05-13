@@ -9,15 +9,15 @@ Side Effects: Sets contributor and operator expectations for the repo-managed na
 
 # claude_skills
 
-Native delivery rails for OpenAI Codex CLI.
+Native delivery rails for Claude Code.
 
-Codex stays the runtime. This repo adds the repeatable parts around it: skills, workflow routing, review gates, memory, command-output compaction, and branch-closeout proof.
+Claude Code stays the runtime. This repo adds the repeatable parts around it: skills, workflow routing, review gates, memory, command-output compaction, and branch-closeout proof.
 
 ## Native Command Routing — Must Follow First
 
 When a native `claude-skills` command owns the job, use it instead of recreating the behavior with raw shell, generic search, or ad hoc instructions.
 
-**Token-saving rule:** the goal is to prevent noisy raw command output from entering Codex context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or the hook-provided `Rerun that as:` wrapper before noisy output is produced.
+**Token-saving rule:** the goal is to prevent noisy raw command output from entering Claude Code context. Do not run a raw noisy command first and compact afterward; route through `claude-skills run -- <command>` or the hook-provided `Rerun that as:` wrapper before noisy output is produced.
 
 - **Noisy shell commands:** prefer `claude-skills run -- <command>` for test, build, lint, log, status, search, Docker, Kubernetes, Terraform, package-manager, and CI-style commands. Use `claude-skills rewrite "<command>"` when unsure whether a command has native compaction.
 - **Hook block-and-rerun:** if the managed `PreToolUse` hook returns `Rerun that as: <command>`, immediately run that exact command. Do not ask the user, do not treat the hook block as a task failure, and do not repeat the raw command first.
@@ -29,7 +29,7 @@ For agent-facing usage in markdown or JSON, run `claude-skills hook instructions
 
 ## Hook Retry Handling
 
-The managed hook may return a Codex denial whose reason begins with `Rerun that as:`. This is expected behavior, not a failure.
+The managed hook may return a Claude Code denial whose reason begins with `Rerun that as:`. This is expected behavior, not a failure.
 
 When that happens:
 1. Copy the command after `Rerun that as:`.
@@ -44,8 +44,8 @@ Example: a raw `cargo test --workspace` may produce `Rerun that as: claude-skill
 
 | Need | Run | Why |
 | --- | --- | --- |
-| First install, no Rust required | Download a release, extract it, run `./claude-skills install` or `.\claude-skills.exe install` | Installs the native binary and managed skills into Codex home. |
-| Check the install | `~/.claude/claude-skills status` or `%USERPROFILE%\.codex\claude-skills.exe status` | Confirms the managed Codex-home surface. |
+| First install, no Rust required | Download a release, extract it, run `./claude-skills install` or `.\claude-skills.exe install` | Installs the native binary and managed skills into Claude Code home. |
+| Check the install | `~/.claude/claude-skills status` or `%USERPROFILE%\.claude-skills\claude-skills.exe status` | Confirms the managed Claude Code-home surface. |
 | First guided run | `claude-skills workflow setup --request "Carry this task to closure"` | The named native operator path for onboarding. |
 | Static guide | `claude-skills workflow first-run` | First Success Path guidance without starting state. |
 | Start normal work | `claude-skills workflow start` | The lowest-friction first run. |
@@ -59,7 +59,7 @@ After install, the preferred global CLI path for agents on supported operating s
 - macOS or Linux: `~/.claude/claude-skills`
 - Windows: `~/.claude/claude-skills.exe`
 
-This matters because the install metadata remembers the source bundle or checkout so `status`, `update`, `verify`, `doctor`, and `menu` can still work when the installed binary is called from another project. For AI-agent or shell contexts where PATH resolution is not guaranteed, prefer the explicit installed path in the Codex home root. `--repo-root <path>` is an advanced override for CI, unusual layouts, or running the binary from a different folder than the extracted release/source checkout.
+This matters because the install metadata remembers the source bundle or checkout so `status`, `update`, `verify`, `doctor`, and `menu` can still work when the installed binary is called from another project. For AI-agent or shell contexts where PATH resolution is not guaranteed, prefer the explicit installed path in the Claude Code home root. `--repo-root <path>` is an advanced override for CI, unusual layouts, or running the binary from a different folder than the extracted release/source checkout.
 
 ## Why Use It
 
@@ -68,7 +68,7 @@ Use `claude_skills` when the team needs delivery work to be easier to inspect an
 | Surface | What it gives you |
 | --- | --- |
 | Workflow | Intake, routing, cockpit, hosted-check repair, and finish gates. |
-| Review | Native `.codex-review.json`, local review gates, and CI-ready artifacts. |
+| Review | Native `.claude-review.json`, local review gates, and CI-ready artifacts. |
 | Memory | Working briefs, completion ledgers, scoped `SYSTEM_MAP.md`, and durable recovery state. |
 | Command compaction | Native benchmark-style output reduction through `claude-skills run --`: hook-integrated shell rewrite, semantic reducers, bounded streaming with `--stream`, raw recovery, and savings analytics without third-party runtime dependencies. |
 | Profiles | 13 managed specialist profiles synced into `~/.claude/agent-profiles/*.toml`. |
@@ -88,14 +88,14 @@ Windows PowerShell:
 
 ```powershell
 irm https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.ps1 | iex
-& "$env:USERPROFILE\.codex\claude-skills.exe" status
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
 ```
 
 Windows CMD:
 
 ```bat
 curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.cmd -o install.cmd && install.cmd && del install.cmd
-%USERPROFILE%\.codex\claude-skills.exe status
+%USERPROFILE%\.claude-skills\claude-skills.exe status
 ```
 
 The bootstrap installer detects your OS and architecture, downloads the matching GitHub release archive into a temporary directory, extracts it, runs `claude-skills install`, verifies `status`, and deletes the temporary files. Set `CLAUDE_SKILLS_VERSION=vX.Y.Z` to install a specific release instead of the latest release.
@@ -124,12 +124,12 @@ Use `--repo-root <path>` only when you intentionally run `claude-skills install`
 ```
 
 ```powershell
-& "$env:USERPROFILE\.codex\claude-skills.exe" update
-& "$env:USERPROFILE\.codex\claude-skills.exe" verify
-& "$env:USERPROFILE\.codex\claude-skills.exe" status
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" update
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" verify
+& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
 ```
 
-The Rust manager remembers the source checkout in install metadata, fast-forwards that checkout on `update`, rebuilds the native CLI when needed, delta-syncs changed files, removes stale managed files, and preserves unrelated Codex-home files. Shell and PowerShell wrapper launchers are no longer shipped.
+The Rust manager remembers the source checkout in install metadata, fast-forwards that checkout on `update`, rebuilds the native CLI when needed, delta-syncs changed files, removes stale managed files, and preserves unrelated Claude Code-home files. Shell and PowerShell wrapper launchers are no longer shipped.
 
 ## Find Fast
 
@@ -145,7 +145,7 @@ The Rust manager remembers the source checkout in install metadata, fast-forward
 | Refresh memory map | `claude-skills memory scope resolve --create-missing --refresh-system-map` |
 | Advanced help | `claude-skills help advanced` |
 
-External output-compaction tools are feature benchmarks for expected output reduction and recoverability, not runtime dependencies. The default path stays the native Rust implementation because it is integrated with Codex hooks, Preserve Existing Flow, review gates, install/update, repository instructions, raw-output recovery, and persisted `gain` analytics.
+External output-compaction tools are feature benchmarks for expected output reduction and recoverability, not runtime dependencies. The default path stays the native Rust implementation because it is integrated with Claude Code hooks, Preserve Existing Flow, review gates, install/update, repository instructions, raw-output recovery, and persisted `gain` analytics.
 
 See [Native Gap Map](docs/native-gap-map.md) for the anonymized comparison between external output reducers, runtime-shell peers, and the current native implementation.
 
@@ -304,7 +304,7 @@ The pack is strict on purpose:
 
 ## Native Review and CI
 
-`.codex-review.json` is the tracked repo-level rule file.
+`.claude-review.json` is the tracked repo-level rule file.
 
 - claude-skills review pre-commit is the local pre-commit surface.
 - claude-skills review pre-pr is the local pre-PR surface.
@@ -365,9 +365,9 @@ What is implemented today:
 - Built-in adapters cover `tests`, `git`, `search`, `files`, `build`, `lint`, `logs`, and `generic` fallback. Test adapters handle cargo/pytest/go/JS-style failure signals; git/search/files adapters summarize diffs, matches, and large reads.
 - `raw <raw_id>`, `raw --path <raw_id>`, `raw list`, `raw prune --older-than 30d`, and `replay <raw_id>` provide local recovery and retention controls.
 - `rewrite --json "<command>"` returns supported/reason/rewritten-command metadata and understands common shell wrappers, environment prefixes, and pipelines by routing them through `bash -lc` when needed.
-- `hook install` writes the documented global Codex lifecycle hook set, with `PreToolUse` handling block-and-rerun command compaction.
+- `hook install` writes the documented global Claude Code lifecycle hook set, with `PreToolUse` handling block-and-rerun command compaction.
 - `hook instructions` prints the agent-facing rerun contract in markdown or JSON.
-- `gain` reads native compaction events from the Codex home and reports observed commands, compacted/passthrough counts, exact tokens before/after/saved, savings percentage, adapter breakdowns, and top commands.
+- `gain` reads native compaction events from the Claude Code home and reports observed commands, compacted/passthrough counts, exact tokens before/after/saved, savings percentage, adapter breakdowns, and top commands.
 - `discover` scans existing local logs for likely missed high-output commands and recommends `claude-skills run -- ...` or future adapters.
 - `doctor` checks the binary, raw store, event log, adapter registry, rewrite behavior, and hook/proxy setup with ok/warn/fix-style output.
 - The runtime never shells out to Go for compaction, hooks, or command dispatch.
@@ -404,7 +404,7 @@ Limitations and safety:
 
 ### Hook path
 
-The one-line installer refreshes the managed Codex hooks automatically, and `claude-skills hook install` can refresh them manually. The hook set is written to `~/.claude/hooks.json`. `PreToolUse` keeps the `Bash` matcher because command-output wrapping is scoped to shell commands; the other lifecycle events use native lifecycle handlers.
+The one-line installer refreshes the managed Claude Code hooks automatically, and `claude-skills hook install` can refresh them manually. The hook set is written to `~/.claude/hooks.json`. `PreToolUse` keeps the `Bash` matcher because command-output wrapping is scoped to shell commands; the other lifecycle events use native lifecycle handlers.
 
 ```json
 {
@@ -461,7 +461,7 @@ claude-skills git-workflow pr-body --from-diff --test-result "cargo test --works
 claude-skills git-workflow lint-message .git/COMMIT_EDITMSG
 ```
 
-The linter rejects chatty language, escaped newline PR bodies, unrelated AI/Codex wording, unsupported hype wording, and first-person phrasing. `git-workflow preflight --message-file <path>` and `review pre-pr --pr-body <text>` use the same professional text rules.
+The linter rejects chatty language, escaped newline PR bodies, unrelated AI/Claude Code wording, unsupported hype wording, and first-person phrasing. `git-workflow preflight --message-file <path>` and `review pre-pr --pr-body <text>` use the same professional text rules.
 
 ## Memory and System Map
 
@@ -474,7 +474,7 @@ claude-skills memory scope resolve --create-missing --refresh-system-map
 claude-skills memory system-map refresh
 ```
 
-The project-scoped global `SYSTEM_MAP.md` target lives under Codex-managed memory, not inside the user repo. Use `claude-skills memory system-map refresh` when the map is missing, stale, or contradicted by current code. The generated map records visible top-level folders, files, direct child structure, applications, entrypoints, main flows, and key ownership hints. Use trace-by-function or trace-by-flow from the relevant entrypoint, mark unknown facts as `Not found`, respect generated artifact trees, handle a monorepo or multi-app workspace by app, and read the target file plus traced function or flow before editing. Modified files should keep file doc headers in the native comment style when the scoped rules require them.
+The project-scoped global `SYSTEM_MAP.md` target lives under Claude Code-managed memory, not inside the user repo. Use `claude-skills memory system-map refresh` when the map is missing, stale, or contradicted by current code. The generated map records visible top-level folders, files, direct child structure, applications, entrypoints, main flows, and key ownership hints. Use trace-by-function or trace-by-flow from the relevant entrypoint, mark unknown facts as `Not found`, respect generated artifact trees, handle a monorepo or multi-app workspace by app, and read the target file plus traced function or flow before editing. Modified files should keep file doc headers in the native comment style when the scoped rules require them.
 
 Useful memory commands:
 
@@ -505,8 +505,8 @@ The interactive manager now keeps five clear choices:
 
 Release download overrides are available for controlled environments:
 
-- CODEX_NATIVE_CLI_RELEASE_METADATA_URL
-- CODEX_NATIVE_CLI_RELEASE_BASE_URL
+- CLAUDE_NATIVE_CLI_RELEASE_METADATA_URL
+- CLAUDE_NATIVE_CLI_RELEASE_BASE_URL
 
 ## Managed Agent Profiles
 
@@ -534,7 +534,7 @@ The native CLI is the primary surface, but these older command shapes remain vis
 | Workflow rules | [./WORKFLOW.md](./WORKFLOW.md) |
 | Agent rules | [./AGENTS.md](./AGENTS.md) |
 | Compatibility matrix | [./docs/compatibility-matrix.md](./docs/compatibility-matrix.md) |
-| Why `claude_skills` over native Codex, runtime-shell comparator, and workflow-teaching comparator | [./docs/why-claude-skills.md](./docs/why-claude-skills.md) |
+| Why `claude_skills` over native Claude Code, runtime-shell comparator, and workflow-teaching comparator | [./docs/why-claude-skills.md](./docs/why-claude-skills.md) |
 | Release notes | [./docs/release-notes.md](./docs/release-notes.md) |
 | Release proof bundle | [./docs/release-proof-bundle.md](./docs/release-proof-bundle.md) |
 | Audit bundle format | [./docs/audit-bundle-format.md](./docs/audit-bundle-format.md) |
@@ -565,14 +565,14 @@ claude_skills/
 |- rust/crates/claude-skills     Native install, update, hook, review, flow, and compaction surfaces
 |- rust/crates/claude-skills-*   Rust support crates for flow, platform, release assets, and text linting
 |- .github/workflows/           native Rust CI and release pipelines
-|- .codex-review.json           native review rules
+|- .claude-review.json           native review rules
 |- AGENTS.md                    agent operating doctrine
 |- WORKFLOW.md                  branch and completion rules
 ```
 
 ## Summary
 
-Install `claude_skills` when Codex CLI needs a clearer path from request to proof:
+Install `claude_skills` when Claude Code needs a clearer path from request to proof:
 
 - Start work with the workflow shell.
 - Keep state in memory and cockpit surfaces.

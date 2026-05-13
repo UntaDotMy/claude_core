@@ -7,7 +7,7 @@ metadata:
 
 <!--
 Purpose: Guide backend, API, data, messaging, resilience, and operability decisions.
-Caller: Codex agents handling backend or data architecture work.
+Caller: Claude Code agents handling backend or data architecture work.
 Dependencies: Repository contracts, runtime evidence, validation results, and selective backend reference files.
 Main Functions: Define backend operating stance, workflow gates, resilience checks, and output expectations.
 Side Effects: Shapes specialist routing, implementation guidance, and production-readiness expectations.
@@ -152,8 +152,8 @@ Do not over-claim certainty when:
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `codex.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `codex.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
+- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
+- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
 - Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
 - Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
 

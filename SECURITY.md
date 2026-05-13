@@ -2,7 +2,7 @@
 
 ## Supported Surface
 
-This repository manages local Codex skill-pack install and validation flows, generated Codex-home wiring, and memory-maintenance helpers. Security-sensitive issues include:
+This repository manages local Claude Code skill-pack install and validation flows, generated Claude Code-home wiring, and memory-maintenance helpers. Security-sensitive issues include:
 
 - unintended mutation of `~/.claude`
 - path handling and temp-directory cleanup

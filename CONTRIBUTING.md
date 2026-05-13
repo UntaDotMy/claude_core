@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This repository is a managed Codex skill pack, not a loose prompt collection. Contributions should preserve the same production-readiness standard across code, docs, tests, generated home wiring, and validation behavior.
+This repository is a managed Claude Code skill pack, not a loose prompt collection. Contributions should preserve the same production-readiness standard across code, docs, tests, generated home wiring, and validation behavior.
 
 ## Contribution Workflow
 
@@ -26,12 +26,12 @@ This repository is a managed Codex skill pack, not a loose prompt collection. Co
 
 ## Required Validation
 
-Run this default native loop from the repository root against a temporary Codex home target:
+Run this default native loop from the repository root against a temporary Claude Code home target:
 
 ```bash
 temporary_claude_home="$(mktemp -d)"
-CODEX_TARGET_OVERRIDE="$temporary_claude_home" cargo run --bin claude-skills -- validate --profile smoke
-CODEX_TARGET_OVERRIDE="$temporary_claude_home" cargo run --bin claude-skills -- install --repo-root "$PWD"
+CLAUDE_TARGET_OVERRIDE="$temporary_claude_home" cargo run --bin claude-skills -- validate --profile smoke
+CLAUDE_TARGET_OVERRIDE="$temporary_claude_home" cargo run --bin claude-skills -- install --repo-root "$PWD"
 "$temporary_claude_home/claude-skills" verify --repo-root "$PWD"
 "$temporary_claude_home/claude-skills" status --repo-root "$PWD"
 ```
@@ -39,13 +39,13 @@ CODEX_TARGET_OVERRIDE="$temporary_claude_home" cargo run --bin claude-skills -- 
 Windows contributors should run the same Rust CLI shape from PowerShell:
 
 ```powershell
-$temporaryCodexHome = Join-Path $env:TEMP "claude-skills-test-home"
-New-Item -ItemType Directory -Force -Path $temporaryCodexHome | Out-Null
-$env:CODEX_TARGET_OVERRIDE = $temporaryCodexHome
+$temporaryClaudeHome = Join-Path $env:TEMP "claude-skills-test-home"
+New-Item -ItemType Directory -Force -Path $temporaryClaudeHome | Out-Null
+$env:CLAUDE_TARGET_OVERRIDE = $temporaryClaudeHome
 cargo run --bin claude-skills -- validate --profile smoke
 cargo run --bin claude-skills -- install --repo-root .
-& (Join-Path $temporaryCodexHome "claude-skills.exe") verify --repo-root .
-& (Join-Path $temporaryCodexHome "claude-skills.exe") status --repo-root .
+& (Join-Path $temporaryClaudeHome "claude-skills.exe") verify --repo-root .
+& (Join-Path $temporaryClaudeHome "claude-skills.exe") status --repo-root .
 ```
 
 Use the live `~/.claude` target only as an intentional final check when the change specifically needs that real-home proof.

@@ -3,7 +3,7 @@ REM Purpose: Bootstrap claude-skills on Windows CMD by delegating to the PowerSh
 REM Caller: Windows CMD users running the documented one-line installer.
 REM Dependencies: curl or PowerShell download support, PowerShell script execution, and GitHub release assets.
 REM Main Functions: Download install.ps1 to temp, run it, and delete the temporary script.
-REM Side Effects: Writes the managed claude-skills surface under %USERPROFILE%\.codex through install.ps1.
+REM Side Effects: Writes the managed claude-skills surface under %USERPROFILE%\.claude-skills through install.ps1.
 
 setlocal
 set "INSTALL_BASE=%CLAUDE_SKILLS_INSTALL_BASE%"

@@ -57,10 +57,18 @@ fn effective_command_fields(words: &[String], depth: usize) -> Vec<String> {
                     break;
                 }
             }
-            effective_command_fields(&words[index..], depth + 1)
+            if index >= words.len() {
+                words[..1].to_vec()
+            } else {
+                effective_command_fields(&words[index..], depth + 1)
+            }
         }
         "time" | "command" | "exec" | "nohup" => {
-            effective_command_fields(&words[index + 1..], depth + 1)
+            if index + 1 >= words.len() {
+                words[index..].to_vec()
+            } else {
+                effective_command_fields(&words[index + 1..], depth + 1)
+            }
         }
         "sudo" | "doas" | "nice" => {
             index += 1;
@@ -71,7 +79,11 @@ fn effective_command_fields(words: &[String], depth: usize) -> Vec<String> {
             {
                 index += 1;
             }
-            effective_command_fields(&words[index..], depth + 1)
+            if index >= words.len() {
+                words[..1].to_vec()
+            } else {
+                effective_command_fields(&words[index..], depth + 1)
+            }
         }
         "bash" | "sh" | "zsh" => {
             for (offset, word) in words[index + 1..].iter().enumerate() {

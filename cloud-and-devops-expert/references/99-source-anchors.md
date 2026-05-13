@@ -5,10 +5,10 @@ Use together with:
 - ../SKILL.md
 - ../../software-development-life-cycle/references/99-source-anchors.md
 
-## Codex and Skill Runtime
+## Claude Code and Skill Runtime
 
-- OpenAI Codex skills docs: https://developers.openai.com/codex/skills#create-a-skill
-- OpenAI Codex CLI docs: https://developers.openai.com/codex/cli
+- Claude Code skills docs: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/skills
+- Claude Code docs: https://docs.anthropic.com/en/docs/agents-and-tools/claude-code
 
 ## Infrastructure as Code and Platform
 

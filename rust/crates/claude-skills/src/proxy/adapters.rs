@@ -5,6 +5,7 @@
 //! Side Effects: Reads optional project filter configuration files from the current workspace.
 
 use crate::adapters::build::BuildAdapter;
+use crate::adapters::containers::ContainersAdapter;
 use crate::adapters::files::FilesAdapter;
 use crate::adapters::generic::GenericAdapter;
 use crate::adapters::git::GitAdapter;
@@ -22,6 +23,7 @@ pub fn build_adapter_registry() -> AdapterRegistry {
     registry.register(Box::new(FilesAdapter));
     registry.register(Box::new(BuildAdapter));
     registry.register(Box::new(LintAdapter));
+    registry.register(Box::new(ContainersAdapter));
     registry.register(Box::new(LogsAdapter));
     for adapter in crate::proxy::filters::load_project_filter_adapters() {
         registry.register(adapter);
@@ -31,7 +33,7 @@ pub fn build_adapter_registry() -> AdapterRegistry {
 }
 
 pub fn adapter_names() -> &'static str {
-    "tests, git, search, files, build, lint, logs, project-filters, generic"
+    "tests, git, search, files, build, lint, containers, logs, project-filters, generic"
 }
 
 #[cfg(test)]

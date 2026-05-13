@@ -47,10 +47,10 @@
 - Declaring an incident resolved without checking lagging effects such as queue buildup or retry storms
 - Writing postmortems that explain what happened but never change the system
 
-## Codex Runtime Boundaries
+## Claude Code Runtime Boundaries
 
-- Codex can review instrumentation code, dashboard definitions, alert rules, and runbook content in the repository.
-- Codex cannot confirm live alert noise, trace completeness, burn-rate behavior, or operator response quality without runtime evidence.
+- Claude Code can review instrumentation code, dashboard definitions, alert rules, and runbook content in the repository.
+- Claude Code cannot confirm live alert noise, trace completeness, burn-rate behavior, or operator response quality without runtime evidence.
 - When telemetry access is unavailable, provide exact dashboards, log queries, and alert checks for humans to run before declaring readiness.
 
 ## Related References

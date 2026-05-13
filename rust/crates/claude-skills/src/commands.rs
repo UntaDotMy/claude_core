@@ -71,7 +71,7 @@ impl Application {
             "bootstrap-info" => {
                 self.run_bootstrap_info_command(command_arguments, standard_output, standard_error)
             }
-            "install" | "i" | "sync" | "s" | "codex" => manager::run_install_command(
+            "install" | "i" | "sync" | "s" => manager::run_install_command(
                 &self.effective_build_version(),
                 command_arguments,
                 standard_output,
@@ -331,21 +331,22 @@ impl Application {
             release_download_url(&repository_slug_flag, &build_version_flag, &target);
 
         if flag_set.bool_value("json") {
-            let mut object_fields: Vec<(String, Value)> = Vec::new();
-            object_fields.push((
-                "buildVersion".into(),
-                Value::String(build_version_trimmed.clone()),
-            ));
-            object_fields.push(("releaseTag".into(), Value::String(release_tag.clone())));
-            object_fields.push((
-                "foundation".into(),
-                Value::String(FOUNDATION_PHASE_NAME.into()),
-            ));
-            object_fields.push(("target".into(), target_value(&target)));
-            object_fields.push((
-                "repositorySlug".into(),
-                Value::String(repository_slug_trimmed.clone()),
-            ));
+            let mut object_fields = vec![
+                (
+                    "buildVersion".into(),
+                    Value::String(build_version_trimmed.clone()),
+                ),
+                ("releaseTag".into(), Value::String(release_tag.clone())),
+                (
+                    "foundation".into(),
+                    Value::String(FOUNDATION_PHASE_NAME.into()),
+                ),
+                ("target".into(), target_value(&target)),
+                (
+                    "repositorySlug".into(),
+                    Value::String(repository_slug_trimmed.clone()),
+                ),
+            ];
             if !repository_root_trimmed.is_empty() {
                 object_fields.push((
                     "repositoryRoot".into(),
@@ -353,7 +354,7 @@ impl Application {
                 ));
             }
             object_fields.push((
-                "codexHomeDirectory".into(),
+                "claudeHomeDirectory".into(),
                 Value::String(effective_claude_home.clone()),
             ));
             object_fields.push((

@@ -16,6 +16,7 @@ pub enum CommandKind {
     Build,
     Lint,
     Logs,
+    Container,
     PackageManager,
     Unknown,
 }
@@ -115,7 +116,21 @@ impl CommandAst {
                     CommandKind::PackageManager
                 }
             }
-            "go" | "mvn" | "gradle" | "dotnet" => {
+            "go" => {
+                if self.args.iter().any(|arg| arg == "test") {
+                    CommandKind::Test
+                } else if self.args.iter().any(|arg| {
+                    matches!(
+                        arg.as_str(),
+                        "build" | "vet" | "mod" | "get" | "install" | "fmt"
+                    )
+                }) {
+                    CommandKind::Build
+                } else {
+                    CommandKind::Unknown
+                }
+            }
+            "mvn" | "gradle" | "dotnet" => {
                 if self.args.iter().any(|arg| arg == "test") {
                     CommandKind::Test
                 } else if self.args.iter().any(|arg| arg == "build" || arg == "vet") {
@@ -131,28 +146,63 @@ impl CommandAst {
                     CommandKind::Test
                 } else if self.args.iter().any(|arg| arg == "build") {
                     CommandKind::Build
-                } else if self
-                    .args
-                    .iter()
-                    .any(|arg| ["install", "i", "ci", "add", "update"].contains(&arg.as_str()))
-                {
+                } else if self.args.iter().any(|arg| {
+                    matches!(
+                        arg.as_str(),
+                        "install"
+                            | "i"
+                            | "ci"
+                            | "add"
+                            | "update"
+                            | "up"
+                            | "remove"
+                            | "rm"
+                            | "ls"
+                            | "list"
+                            | "outdated"
+                            | "audit"
+                    )
+                }) {
                     CommandKind::PackageManager
                 } else {
                     CommandKind::Unknown
                 }
             }
             "git" if self.args.first().map(String::as_str) == Some("grep") => CommandKind::Search,
-            "git" | "gh" => CommandKind::Git,
+            "git" | "gh" | "git-lfs" => CommandKind::Git,
             "rg" | "grep" => CommandKind::Search,
-            "cat" | "head" | "tail" | "sed" | "jq" => CommandKind::FileRead,
-            "ls" | "find" | "tree" => CommandKind::FileList,
-            "tsc" | "prettier" => CommandKind::Build,
-            "make" => CommandKind::Build,
+            "cat" | "head" | "tail" | "sed" | "jq" | "awk" | "sort" | "uniq" | "wc" | "cut"
+            | "tr" | "tee" => CommandKind::FileRead,
+            "diff" | "wdiff" | "colordiff" | "comm" | "cmp" => CommandKind::FileRead,
+            "file" | "stat" | "echo" | "printf" | "env" | "printenv" => CommandKind::FileRead,
+            "xxd" | "hexdump" | "od" => CommandKind::FileRead,
+            "ls" | "find" | "tree" | "dir" => CommandKind::FileList,
+            "which" | "whereis" | "where" | "type" | "whatis" => CommandKind::FileList,
+            "tsc" | "prettier" | "esbuild" | "swc" | "rollup" | "parcel" | "turbo" => {
+                CommandKind::Build
+            }
+            "make" | "cmake" | "ninja" | "xcodebuild" | "msbuild" => CommandKind::Build,
+            "chmod" | "chown" | "touch" | "mkdir" | "rm" | "cp" | "mv" | "ln" | "rmdir" => {
+                CommandKind::Build
+            }
+            "dd" | "install" | "strip" => CommandKind::Build,
             "eslint" | "ruff" | "mypy" | "biome" => CommandKind::Lint,
-            "docker" | "kubectl" | "terraform" | "aws" => CommandKind::Logs,
-            "curl" | "wget" => CommandKind::Logs,
-            "journalctl" | "systemctl" => CommandKind::Logs,
-            "pip" | "pip3" => CommandKind::Build,
+            "docker" | "kubectl" | "helm" | "podman" | "nerdctl" => CommandKind::Container,
+            "terraform" | "aws" | "az" | "gcloud" => CommandKind::Logs,
+            "curl" | "wget" | "http" | "xh" | "httpie" => CommandKind::Logs,
+            "journalctl" | "systemctl" | "loginctl" => CommandKind::Logs,
+            "pip" | "pip3" => {
+                if self.args.iter().any(|arg| {
+                    matches!(
+                        arg.as_str(),
+                        "list" | "freeze" | "show" | "install" | "uninstall" | "download"
+                    )
+                }) {
+                    CommandKind::PackageManager
+                } else {
+                    CommandKind::Build
+                }
+            }
             "rake" => {
                 if self.args.iter().any(|arg| arg == "test") {
                     CommandKind::Test
@@ -186,7 +236,24 @@ impl CommandAst {
                     CommandKind::Unknown
                 }
             }
-            "brew" | "apt" | "apt-get" => CommandKind::PackageManager,
+            "brew" | "apt" | "apt-get" | "apk" | "choco" | "winget" | "scoop" => {
+                CommandKind::PackageManager
+            }
+            "df" | "du" | "ncdu" => CommandKind::FileList,
+            "ps" | "top" | "htop" | "pgrep" | "pidof" | "kill" | "killall" | "pkill" | "pwdx"
+            | "lsof" | "fuser" => CommandKind::Container,
+            "netstat" | "ss" | "ping" | "traceroute" | "nslookup" | "dig" | "host" | "nc"
+            | "telnet" | "nmap" | "tcpdump" | "iperf" | "iperf3" => CommandKind::Logs,
+            "ip" | "ifconfig" | "route" | "arp" | "brctl" | "iptables" | "ufw" => CommandKind::Logs,
+            "tar" | "zip" | "unzip" | "gzip" | "gunzip" | "bzip2" | "xz" | "7z" | "rar"
+            | "unrar" => CommandKind::Build,
+            "scp" | "rsync" | "sftp" | "ssh" | "ssh-keygen" | "ssh-keyscan" | "ssh-copy-id"
+            | "socat" => CommandKind::Logs,
+            "openssl" | "gpg" | "gpg2" | "age" | "age-keygen" => CommandKind::Logs,
+            "date" | "uptime" | "uname" | "hostname" | "whoami" | "who" | "id" | "groups"
+            | "locale" => CommandKind::FileRead,
+            "pg_dump" | "pg_dumpall" | "pg_restore" | "psql" | "sqlite3" | "mysql"
+            | "mysqldump" | "redis-cli" | "mongosh" => CommandKind::Logs,
             _ => CommandKind::Unknown,
         };
     }

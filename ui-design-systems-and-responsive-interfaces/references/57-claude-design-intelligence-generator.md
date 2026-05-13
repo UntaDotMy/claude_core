@@ -1,4 +1,4 @@
-# Codex Design-Intelligence Generator
+# Claude Code Design-Intelligence Generator
 
 Use this reference when you want a structured UI recommendation packet generated from local data rather than relying on freeform invention alone.
 
