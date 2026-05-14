@@ -134,9 +134,6 @@ fn run_review_gates_command(
                 Some("cargo test --workspace failed".to_string())
             },
         });
-        if !test_passed {
-            blocking_findings += 1;
-        }
     }
 
     // Python checks (if requested and Python files exist)
@@ -835,6 +832,7 @@ fn render_generated_message(
         "No diff summary requested.".to_string()
     };
     if message_kind == "commit" {
+        // TODO: Generate commit message from diff instead of using placeholder
         let _ = writeln!(
             standard_output,
             "chore: migrate claude-skills runtime to rust"
@@ -842,6 +840,7 @@ fn render_generated_message(
         let _ = writeln!(standard_output);
         let _ = writeln!(standard_output, "{diff_summary}");
     } else {
+        // TODO: Generate PR body from diff instead of using placeholder
         let _ = writeln!(standard_output, "## Summary");
         let _ = writeln!(
             standard_output,

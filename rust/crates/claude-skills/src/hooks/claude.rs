@@ -1,10 +1,8 @@
 //! Purpose: Describe Claude Code hook expectations for token-saving proxy interception.
 //! Caller: hooks module, runner managed-hook payload, doctor checks.
 //! Dependencies: Claude Code settings.json hooks schema.
-//! Main Functions: host_name, required_feature_flag, pre_tool_matcher, events, settings_file_name, lifecycle_subcommand, status_message.
+//! Main Functions: required_feature_flag, pre_tool_matcher, events, settings_file_name, lifecycle_subcommand, status_message.
 //! Side Effects: None.
-
-pub const HOST: &str = "claude";
 
 /// Claude Code stores hook configuration inside `settings.json` under a top-level `hooks` key.
 pub const SETTINGS_FILE_NAME: &str = "settings.json";
@@ -35,10 +33,6 @@ pub const EVENTS: &[&str] = &[
     "SessionStart",
     "SessionEnd",
 ];
-
-pub const fn host_name() -> &'static str {
-    HOST
-}
 
 /// Claude Code uses no dedicated feature flag; hooks are active whenever settings.json is loaded.
 #[allow(dead_code)]
