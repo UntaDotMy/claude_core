@@ -849,6 +849,7 @@ fn sanitize_memory_key(value: &str) -> String {
 /// auto-selects the appropriate specialist skill instead of relying on the user
 /// to recall slash commands. Token-frugal: emits a single short string only when
 /// the prompt is non-empty; no I/O, no per-skill scan, no model call.
+#[allow(dead_code)]
 fn run_hook_user_prompt_submit(
     standard_output: &mut dyn Write,
     standard_error: &mut dyn Write,
