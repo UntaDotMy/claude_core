@@ -5,7 +5,7 @@ Dependencies: Native CLI commands, workflow docs, memory surfaces, review gates,
 Main Functions: Explain what to run first, where to find each surface, and how closure proof works.
 Side Effects: Sets contributor and operator expectations for the repo-managed native experience.
 -->
-[![Validate](https://github.com/UntaDotMy/claude_skills/actions/workflows/validate.yml/badge.svg)](https://github.com/UntaDotMy/claude_skills/actions/workflows/validate.yml)
+[![Validate](https://github.com/UntaDotMy/claude_core/actions/workflows/validate.yml/badge.svg)](https://github.com/UntaDotMy/claude_core/actions/workflows/validate.yml)
 
 # claude_skills
 
@@ -45,7 +45,7 @@ Example: a raw `cargo test --workspace` may produce `Rerun that as: claude-skill
 | Need | Run | Why |
 | --- | --- | --- |
 | First install, no Rust required | Download a release, extract it, run `./claude-skills install` or `.\claude-skills.exe install` | Installs the native binary and managed skills into Claude Code home. |
-| Check the install | `~/.claude/claude-skills status` or `%USERPROFILE%\.claude-skills\claude-skills.exe status` | Confirms the managed Claude Code-home surface. |
+| Check the install | `~/.claude/claude-skills status` or `%USERPROFILE%\.claude\claude-skills.exe status` | Confirms the managed Claude Code-home surface. |
 | First guided run | `claude-skills workflow setup --request "Carry this task to closure"` | The named native operator path for onboarding. |
 | Static guide | `claude-skills workflow first-run` | First Success Path guidance without starting state. |
 | Start normal work | `claude-skills workflow start` | The lowest-friction first run. |
@@ -80,22 +80,22 @@ Use `claude_skills` when the team needs delivery work to be easier to inspect an
 macOS or Linux:
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.sh | bash
 ~/.claude/claude-skills status
 ```
 
 Windows PowerShell:
 
 ```powershell
-irm https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.ps1 | iex
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
+irm https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.ps1 | iex
+& "$env:USERPROFILE\.claude\claude-skills.exe" status
 ```
 
 Windows CMD:
 
 ```bat
-curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_skills/main/install.cmd -o install.cmd && install.cmd && del install.cmd
-%USERPROFILE%\.claude-skills\claude-skills.exe status
+curl -fsSL https://raw.githubusercontent.com/UntaDotMy/claude_core/main/install.cmd -o install.cmd && install.cmd && del install.cmd
+%USERPROFILE%\.claude\claude-skills.exe status
 ```
 
 The bootstrap installer detects your OS and architecture, downloads the matching GitHub release archive into a temporary directory, extracts it, runs `claude-skills install`, verifies `status`, and deletes the temporary files. Set `CLAUDE_SKILLS_VERSION=vX.Y.Z` to install a specific release instead of the latest release.
@@ -107,8 +107,8 @@ Download the archive for your OS from GitHub Releases, extract it, open a termin
 ### Contributors: install from source
 
 ```bash
-git clone https://github.com/UntaDotMy/claude_skills.git
-cd claude_skills
+git clone https://github.com/UntaDotMy/claude_core.git
+cd claude_core
 cargo run --bin claude-skills -- install
 cargo run --bin claude-skills -- status
 ```
@@ -124,9 +124,9 @@ Use `--repo-root <path>` only when you intentionally run `claude-skills install`
 ```
 
 ```powershell
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" update
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" verify
-& "$env:USERPROFILE\.claude-skills\claude-skills.exe" status
+& "$env:USERPROFILE\.claude\claude-skills.exe" update
+& "$env:USERPROFILE\.claude\claude-skills.exe" verify
+& "$env:USERPROFILE\.claude\claude-skills.exe" status
 ```
 
 The Rust manager remembers the source checkout in install metadata, fast-forwards that checkout on `update`, rebuilds the native CLI when needed, delta-syncs changed files, removes stale managed files, and preserves unrelated Claude Code-home files. Shell and PowerShell wrapper launchers are no longer shipped.
