@@ -681,13 +681,30 @@ fn run_hook_lifecycle(
     if context.trim().is_empty() {
         return 0;
     }
-    let payload = serde_json::json!({
-        "hookSpecificOutput": {
-            "hookEventName": event_name,
-            "additionalContext": context,
-        },
-        "suppressOutput": true,
-    });
+
+    // Only PreToolUse, UserPromptSubmit, PostToolUse, and PostToolBatch
+    // support hookSpecificOutput in Claude Code's hook schema. Other events
+    // (Stop, SessionStart, etc.) must use top-level fields only.
+    let supports_hook_specific = matches!(
+        event_name,
+        "PreToolUse" | "UserPromptSubmit" | "PostToolUse" | "PostToolBatch"
+    );
+
+    let payload = if supports_hook_specific {
+        serde_json::json!({
+            "hookSpecificOutput": {
+                "hookEventName": event_name,
+                "additionalContext": context,
+            },
+            "suppressOutput": true,
+        })
+    } else {
+        serde_json::json!({
+            "systemMessage": context,
+            "suppressOutput": true,
+        })
+    };
+
     match serde_json::to_string_pretty(&payload) {
         Ok(rendered) => {
             let _ = writeln!(standard_output, "{rendered}");
