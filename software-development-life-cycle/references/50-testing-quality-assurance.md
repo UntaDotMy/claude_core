@@ -38,6 +38,30 @@ Avoid the inverted pyramid anti-pattern (too many brittle end-to-end tests).
 - Minimal mocking at integration boundaries only.
 - Clear naming tied to expected behavior.
 
+## What to Test
+
+- Critical business logic
+- Edge cases and error conditions
+- Integration points (APIs, databases)
+- Security boundaries
+
+## When to Write Tests
+
+- New critical functionality
+- Bug fixes (test should fail before fix, pass after)
+- Complex logic with edge cases
+- Public APIs
+
+## Mandatory Release Ladder
+
+Run the applicable ladder in this order for release-ready work:
+
+```
+Smoke testing → Functional testing → Integration testing → UI testing → Load testing → Stress testing → Security testing
+```
+
+Treat the ladder as fail-closed: if any required rung fails, stays blocked, or is skipped without a justified not-applicable reason, the change is no-go.
+
 ## Definition of Done (Testing)
 
 Require all of the following for changed behavior:

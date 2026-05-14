@@ -1,17 +1,14 @@
 ---
 name: memory-status-reporter
 description: Produces human-style memory status reports from Claude Code memory files. Use for requests like "what did you learn today", "show memory status", "what mistakes happened and are they resolved", "how is memory growing", or "summarize what you understand about my needs."
-metadata:
-  short-description: Human-style memory health and learning reports
+when_to_use: Human-style memory health and learning reports.
+allowed-tools: Read, Grep, Glob, Bash(claude-skills memory:*)
+effort: low
+tags: [memory, status-report, summarization, learning-recap]
 ---
 
-<!--
-Purpose: Produce human-readable memory health, learning, mistake, and user-needs reports.
-Caller: Claude Code agents responding to explicit memory status, learning recap, or mistake ledger requests.
-Dependencies: Scoped memory artifacts, rollout summaries, WAL files, and native memory report commands.
-Main Functions: Define report contracts, memory source priority, evidence handling, and guardrails.
-Side Effects: Reads memory artifacts and summarizes durable state without changing routine task memory ownership.
--->
+---
+
 # Memory Status Reporter
 
 ## Purpose
@@ -20,22 +17,16 @@ Turn Claude Code memory artifacts into a human-readable status report that feels
 
 Use this skill only when the user explicitly wants a memory-health report, learning recap, mistake ledger, user-needs summary, or heuristic growth report. Routine durable memory, planning, progress, and closure updates belong to the main lane through the Rust-native `claude-skills memory ...` commands, which should keep the writable global second-layer store under `~/.claude/memoriesv2/` synchronized.
 
-## Research Reuse Defaults
+## Research Reuse Defaults · Completion Discipline · Memory and Security Boundaries
 
-- Check indexed memory and any recorded research-cache entry before starting a fresh live research loop.
-- Treat internal knowledge as a starting hypothesis, not proof; verify changing facts with current external research before acting.
-- Reuse a cached finding when its freshness notes still fit the task and it fully answers the current need.
-- Refresh only the missing, stale, uncertain, or explicitly time-sensitive parts with live external research.
-- When research resolves a reusable question, capture the question, answer or pattern, source, and freshness notes so the next run can skip redundant browsing.
+See `_shared/common-discipline.md` for the canonical rules. Apply them to all work in this skill.
 
-## Completion Discipline
+### Skill-Specific Additions
 
-- When validation, testing, or review reveals another in-scope bug or quality gap, keep iterating in the same turn and fix the next issue before handing off.
 - If the requested work in one file exposes another fixable in-scope flaw elsewhere that must be corrected for the delivered item to be clean and production-ready, fix it before final delivery instead of turning it into "next steps" prose. Do not widen into unrelated features or unrelated cleanup.
 - A progress, recap, audit, or "what is done or not done" request is an honest checkpoint, not a closing condition; if fixable in-scope work remains, keep going after the status summary until the requested job is actually complete.
 - For non-trivial tasks, track explicit user requirements in the scoped completion ledger with `claude-skills memory completion-gate ...` and treat the final `check` result as the closure gate instead of relying on narrative judgment alone.
 - After non-trivial work, confirm the main lane has made durable memory updates explicit: refresh session state for corrections, keep the working brief current, update the completion ledger, and record reusable research or mistakes before final delivery.
-- Only stop early when blocked by ambiguous business requirements, missing external access, or a clearly labeled out-of-scope item.
 
 ## WAL and Working Buffer Protocol
 

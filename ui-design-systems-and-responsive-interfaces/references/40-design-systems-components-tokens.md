@@ -41,3 +41,51 @@ Use this sequence before creating a new component:
 - Prevent duplicate components with overlapping behavior.
 - Maintain a single source of truth for canonical components.
 - Audit component sprawl and remove stale variants on a regular cadence.
+
+## Common UI Patterns
+
+### Layout
+| Pattern | Use |
+|---|---|
+| Container | Max-width wrapper with padding |
+| Grid | Multi-column responsive layouts |
+| Stack | Vertical spacing between elements |
+| Cluster | Horizontal grouping with wrapping |
+| Sidebar | Fixed/collapsible side navigation |
+
+### Navigation
+| Pattern | Use |
+|---|---|
+| Header | Logo, primary nav, user actions |
+| Breadcrumbs | Show hierarchy, aid navigation |
+| Tabs | Switch between related views |
+| Pagination | Navigate large datasets |
+| Menu | Dropdown/flyout for actions |
+
+### Forms
+| Pattern | Use |
+|---|---|
+| Input | Text, number, email with validation |
+| Select | Dropdown for options |
+| Checkbox/Radio | Multiple/single selection |
+| Textarea | Multi-line text input |
+| Validation | Inline errors, clear messaging |
+
+### Feedback
+| Pattern | Use |
+|---|---|
+| Toast/Snackbar | Temporary notifications |
+| Modal | Focused task/confirmation |
+| Alert | Important system messages |
+| Progress | Loading states, progress bars |
+| Empty States | Helpful guidance when no content |
+
+## Design System Workflow
+
+| Step | Action |
+|---|---|
+| 1. Audit | Check if component/pattern already exists; review tokens |
+| 2. Design/Extend | Use existing tokens; create variants systematically; consider all states |
+| 3. Implement | Build reusable components; use tokens consistently; include accessibility |
+| 4. Test | Visual regression, accessibility audit, responsive testing, theme testing |
+| 5. Document | Usage guidelines, props/API, examples, accessibility notes |

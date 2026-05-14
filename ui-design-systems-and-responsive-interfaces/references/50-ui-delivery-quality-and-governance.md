@@ -32,3 +32,34 @@ Require at least:
 - Track web performance/latency indicators for UI-heavy flows.
 - Use real-user feedback and usability signals to prioritize improvements.
 - Include regressions from support tickets and user recordings in UI debt prioritization.
+
+## Tools and Testing
+
+### Design Tools
+- Figma, Sketch, Adobe XD for design
+- Design tokens (Style Dictionary, Theo)
+- Component libraries (Storybook, Bit)
+- Pencil, when the workspace already uses it, for code-first design artifacts
+
+### Testing Tools
+- Storybook, Ladle, or Histoire for isolated component states
+- **Accessibility**: axe DevTools, Lighthouse, WAVE
+- **Contrast**: WebAIM Contrast Checker
+- **Screen Readers**: NVDA (Windows), JAWS, VoiceOver (Mac/iOS)
+- **Responsive**: Browser DevTools, real devices
+- **Visual Regression**: Percy, Chromatic, BackstopJS
+
+## Team Best Practices
+
+1. Mobile First: design for smallest screen, enhance up
+2. Semantic HTML: use correct elements for meaning
+3. Design Tokens: centralize design decisions
+4. Component Reuse: don't duplicate, extend
+5. Accessibility: build in from start, not retrofit
+6. Real Testing: test on actual devices and assistive tech
+7. Performance: optimize images, minimize layout shifts
+8. Documentation: keep design system docs current
+9. Consistency: follow established patterns
+10. Verify Components in Isolation: use Storybook, Ladle, or Histoire when compatible
+11. Design for Brownfield Change: modernize surgically, preserve proven assets
+12. User Focus: design for real users, not just aesthetics

@@ -32,7 +32,41 @@ Use established heuristics as baseline checks:
 
 ## Severity Calibration (Practical)
 
-- Blocker: critical task fails or serious accessibility/trust risk.
-- Major: high-friction issue likely to reduce success/conversion materially.
-- Minor: clear quality issue with limited risk.
-- Nit: polish suggestion with low measurable impact.
+| Level | Definition |
+|---|---|
+| Blocker | Critical task fails or serious accessibility/trust risk |
+| Major | High-friction issue likely to reduce success/conversion materially |
+| Minor | Clear quality issue with limited risk |
+| Nit | Polish suggestion with low measurable impact |
+
+## Common UX Issues by Category
+
+### Navigation
+- Can't find key features
+- Unclear labels/categories
+- Too many levels deep
+- Inconsistent navigation patterns
+
+### Forms
+- Too many required fields
+- Unclear error messages
+- Lost progress on errors
+- No inline validation
+
+### Content
+- Unclear value proposition
+- Too much text (walls of text)
+- Jargon and unclear language
+- Missing key information
+
+### Interaction
+- Unclear what's clickable
+- No feedback on actions
+- Confusing button labels
+- Inconsistent interaction patterns
+
+### Mobile
+- Tiny touch targets
+- Horizontal scrolling
+- Text too small
+- Desktop-only features

@@ -44,3 +44,17 @@ Pair outcome metrics with actionable product metrics and operational diagnostics
 4. Measure change and side effects.
 5. Keep, refine, or roll back.
 6. Feed validated changes back into UX/system standards to prevent regression.
+
+## Prioritization Matrices
+
+### Severity x Frequency
+| | Common | Rare |
+|---|---|---|
+| **Critical** | Fix immediately | Fix soon, provide workaround |
+| **Minor** | Fix when possible | Backlog |
+
+### Impact vs Effort
+| | Low Effort | High Effort |
+|---|---|---|
+| **High Impact** | Do first (quick wins) | Plan carefully (big bets) |
+| **Low Impact** | Do when time permits | Don't do (waste) |

@@ -1,0 +1,39 @@
+{
+  "name": "claude-core",
+  "version": "0.1.0",
+  "description": "Native delivery rails for Claude Code — managed specialist skills, subagents, hooks, review gates, and the claude-skills CLI for workflow, memory, and command compaction.",
+  "author": {
+    "name": "UntaDotMy",
+    "url": "https://github.com/UntaDotMy/claude_core"
+  },
+  "homepage": "https://github.com/UntaDotMy/claude_core",
+  "repository": "https://github.com/UntaDotMy/claude_core",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "skills",
+    "subagents",
+    "hooks",
+    "workflow",
+    "review",
+    "memory",
+    "automation"
+  ],
+  "skills": [
+    "./backend-and-data-architecture",
+    "./cloud-and-devops-expert",
+    "./git-expert",
+    "./memory-status-reporter",
+    "./mobile-development-life-cycle",
+    "./preserve-existing-flow",
+    "./qa-and-automation-engineer",
+    "./reviewer",
+    "./security-and-compliance-auditor",
+    "./software-development-life-cycle",
+    "./ui-design-systems-and-responsive-interfaces",
+    "./ux-research-and-experience-strategy",
+    "./web-development-life-cycle"
+  ],
+  "agents": "./.claude/agents/",
+  "hooks": "./.claude/hooks.json"
+}

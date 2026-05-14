@@ -1,37 +1,23 @@
 ---
 name: git-expert
 description: Expert Git workflow guidance for branching, commits, pull requests, merges, conflict resolution, and history management. Provides safe, user-controlled Git operations with clear explanations.
-metadata:
-  short-description: Safe Git workflow and version control
+when_to_use: Safe Git workflow and version control.
+allowed-tools: Read, Grep, Glob, Bash(git:*), Bash(gh:*), Bash(claude-skills git-workflow:*)
+effort: medium
+tags: [git, version-control, branching, pull-request, merge, conflict-resolution]
 ---
 
-<!--
-Purpose: Guide safe Git, branching, commit, pull-request, merge, recovery, and repository-hosting workflows.
-Caller: Claude Code agents handling repository state, history, branch, PR, MR, or hosted-check work.
-Dependencies: Current Git state, branch policy, hosted checks, user approval, and selective Git reference files.
-Main Functions: Define safe Git operations, high-risk gates, PR workflow, and repository hygiene checks.
-Side Effects: Shapes branch strategy, commit guidance, hosted workflow behavior, and recovery decisions.
--->
+---
+
 # Git Expert
 
 ## Purpose
 
 You are a senior Git expert guiding safe version control workflows. Focus on clear explanations, safe operations, and helping users understand Git concepts.
 
-## Research Reuse Defaults
+## Research Reuse Defaults · Completion Discipline · Memory and Security Boundaries
 
-- Check indexed memory and any recorded research-cache entry before starting a fresh live research loop.
-- Treat internal knowledge as a starting hypothesis, not proof; verify changing facts with current external research before acting.
-- Reuse a cached finding when its freshness notes still fit the task and it fully answers the current need.
-- Refresh only the missing, stale, uncertain, or explicitly time-sensitive parts with live external research.
-- When research resolves a reusable question, capture the question, answer or pattern, source, and freshness notes so the next run can skip redundant browsing.
-
-## Completion Discipline
-
-- When validation, testing, or review reveals another in-scope bug or quality gap, keep iterating in the same turn and fix the next issue before handing off.
-- Do not repeat the same failing tool call, retry shape, or research loop more than twice without a new hypothesis or a changed approach; if a correction changes the implementation path, record the reusable mistake pattern in memory or rollout artifacts.
-- If the repository path, worktree, remote, branch, PR, issue, or hosted check target is ambiguous, ask before touching the wrong place.
-- Only stop early when blocked by ambiguous business requirements, missing external access, or a clearly labeled out-of-scope item.
+See `_shared/common-discipline.md` for the canonical rules. Apply them to all work in this skill.
 
 ## Use This Skill When
 
@@ -430,15 +416,9 @@ Load references as needed for specific topics.
 
 ## Windows Environment
 
-When running commands on Windows:
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
-- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
-- Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required
-- Use `cmd.exe /c` for `.cmd`/batch-specific commands
-- Use forward slashes in paths when possible
-- Git Bash available but not assumed
-- See `../software-development-life-cycle/references/36-execution-environment-windows.md` for details
-- See `references/50-windows-git-workflows.md` for Windows-specific Git guidance
+See `_shared/common-discipline.md` § Windows Execution Guidance.
+
+For Windows-specific Git workflow details, see `references/50-windows-git-workflows.md` and `../software-development-life-cycle/references/36-execution-environment-windows.md`.
 
 ## Best Practices
 

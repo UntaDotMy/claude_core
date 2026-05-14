@@ -33,3 +33,23 @@ Deliver findings as:
 - Opportunity statements
 - Recommended actions with expected user impact
 - Explicit “do now vs later” prioritization tied to delivery risk
+
+## Research Ethics
+
+### Informed Consent
+- Explain what you're testing and why
+- Explain how data will be used
+- Get explicit consent to record
+- Allow participants to withdraw anytime
+
+### Privacy
+- Anonymize participant data
+- Secure storage of recordings/notes
+- Don't share identifying information
+- Follow GDPR/privacy regulations
+
+### Respect
+- Don't make participants feel stupid
+- Thank them for their time
+- Compensate fairly
+- Act on their feedback

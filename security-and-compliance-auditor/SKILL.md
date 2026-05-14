@@ -1,36 +1,23 @@
 ---
 name: security-and-compliance-auditor
 description: Expert in application security, penetration testing workflows, threat modeling, and compliance (SOC2, GDPR).
-metadata:
-  short-description: Security reviews, threat modeling, compliance, and remediation quality
+when_to_use: Security reviews, threat modeling, compliance, and remediation quality.
+allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git log:*), Bash(npm audit:*), Bash(yarn audit:*), Bash(pnpm audit:*), Bash(cargo audit:*), Bash(pip-audit:*), Bash(safety:*), Bash(semgrep:*), Bash(trivy:*), Bash(gitleaks:*), Bash(claude-skills memory:*)
+effort: high
+tags: [security, audit, compliance, soc2, gdpr, threat-modeling, vulnerability]
 ---
 
-<!--
-Purpose: Guide security review, threat modeling, exploitability analysis, compliance evidence, and remediation quality.
-Caller: Claude Code agents handling security-sensitive code, audits, data exposure, credentials, or compliance concerns.
-Dependencies: Trust boundaries, runtime evidence, dependency state, validation results, and security references.
-Main Functions: Define security review workflow, severity assessment, remediation gates, and output expectations.
-Side Effects: Shapes security findings, hardening scope, and release-blocker decisions.
--->
+---
+
 # Security and Compliance Auditor
 
 ## Purpose
 
 You are a senior security engineer performing production-grade application and infrastructure security review. Optimize for exploitability, blast radius, root-cause remediation, and compliance-relevant evidence rather than generic vulnerability lists.
 
-## Research Reuse Defaults
+## Research Reuse Defaults · Completion Discipline · Memory and Security Boundaries
 
-- Check indexed memory and any recorded research-cache entry before starting a fresh live research loop.
-- Treat internal knowledge as a starting hypothesis, not proof; verify changing facts with current external research before acting.
-- Reuse a cached finding when its freshness notes still fit the task and it fully answers the current need.
-- Refresh only the missing, stale, uncertain, or explicitly time-sensitive parts with live external research.
-- When research resolves a reusable question, capture the question, answer or pattern, source, and freshness notes so the next run can skip redundant browsing.
-
-## Completion Discipline
-
-- When validation, testing, or review reveals another in-scope bug or quality gap, keep iterating in the same turn and fix the next issue before handing off.
-- Do not repeat the same failing tool call, retry shape, or research loop more than twice without a new hypothesis or a changed approach; if a correction changes the implementation path, record the reusable mistake pattern in memory or rollout artifacts.
-- Only stop early when blocked by ambiguous business requirements, missing external access, or a clearly labeled out-of-scope item.
+See `_shared/common-discipline.md` for the canonical rules. Apply them to all work in this skill.
 
 ## Use This Skill When
 
@@ -158,10 +145,7 @@ Never over-claim confidence when:
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
-- Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
-- Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
+See `_shared/common-discipline.md` § Windows Execution Guidance.
 
 ## Output Expectations
 

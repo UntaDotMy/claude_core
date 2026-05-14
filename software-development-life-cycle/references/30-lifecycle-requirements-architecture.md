@@ -73,9 +73,35 @@ Keep diagrams versioned with the system and updated when interfaces evolve.
 
 Use patterns intentionally:
 
-- Factory for controlled object creation
-- Strategy for interchangeable business rules
-- Observer for event-driven notifications
-- MVC/MVVM for UI separation concerns
+| Pattern | Use Case |
+|---|---|
+| Factory | Controlled object creation |
+| Strategy | Interchangeable business rules |
+| Observer | Event-driven notifications |
+| MVC/MVVM | UI separation concerns |
 
 Avoid forced pattern usage that increases accidental complexity.
+
+## Common Scenarios
+
+### Adding a Feature
+1. Read existing code to understand patterns
+2. Find where feature fits in architecture
+3. Reuse existing utilities/components
+4. Write minimal code to implement
+5. Add tests for critical paths
+6. Verify no regressions
+
+### Refactoring
+1. Understand why refactoring is needed
+2. Ensure tests exist (write if needed)
+3. Make small, incremental changes
+4. Run tests after each change
+5. Verify behavior unchanged
+
+### Performance Optimization
+1. Measure first (profile, don't guess)
+2. Identify actual bottleneck
+3. Consider algorithmic improvements
+4. Optimize hot paths only
+5. Measure again to verify improvement

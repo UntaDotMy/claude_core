@@ -10,19 +10,26 @@ pub const HOST: &str = "claude";
 pub const SETTINGS_FILE_NAME: &str = "settings.json";
 
 /// Claude Code's managed hook events — the lifecycle breadcrumbs the claude-skills
-/// manager subscribes to. This is a curated subset of the full 29 events documented
+/// manager subscribes to. This is a curated subset of the full event set documented
 /// at code.claude.com/docs/en/hooks; we wire up the ones that materially affect the
 /// manager's behavior (tool rewriting, permission tracking, compaction checkpoints,
-/// session and prompt lifecycle). Order is stable so rendered settings.json entries
-/// remain deterministic.
+/// session and prompt lifecycle, task tracking, failure recording). Order is stable
+/// so rendered settings.json entries remain deterministic.
+///
+/// Note: 9 events in the official spec have no matcher support
+/// (UserPromptSubmit, Stop, TaskCreated, TaskCompleted, PostToolBatch, TeammateIdle,
+/// WorktreeCreate, WorktreeRemove, CwdChanged). Do not add a matcher for those.
 pub const EVENTS: &[&str] = &[
     "PreToolUse",
     "PostToolUse",
+    "PostToolUseFailure",
     "PermissionRequest",
     "Notification",
     "UserPromptSubmit",
     "Stop",
     "SubagentStop",
+    "TaskCreated",
+    "TaskCompleted",
     "PreCompact",
     "PostCompact",
     "SessionStart",
@@ -50,16 +57,19 @@ pub fn lifecycle_subcommand(event: &str) -> &'static str {
     match event {
         "PreToolUse" => "pre-tool-use",
         "PostToolUse" => "post-tool-use",
+        "PostToolUseFailure" => "post-tool-use-failure",
         "PermissionRequest" => "permission-request",
         "Notification" => "notification",
         "UserPromptSubmit" => "user-prompt-submit",
         "Stop" => "stop",
         "SubagentStop" => "subagent-stop",
+        "TaskCreated" => "task-created",
+        "TaskCompleted" => "task-completed",
         "PreCompact" => "pre-compact",
         "PostCompact" => "post-compact",
         "SessionStart" => "session-start",
         "SessionEnd" => "session-end",
-        _ => "stop",
+        _ => "unknown",
     }
 }
 
@@ -68,11 +78,14 @@ pub fn status_message(event: &str) -> &'static str {
     match event {
         "PreToolUse" => "Transparently rewriting noisy commands via claude-skills run",
         "PostToolUse" => "Recording post-tool lifecycle",
+        "PostToolUseFailure" => "Recording tool failure for routing and recovery",
         "PermissionRequest" => "Recording permission lifecycle",
         "Notification" => "Recording notification lifecycle",
-        "UserPromptSubmit" => "Checking prompt routing",
+        "UserPromptSubmit" => "Routing prompt to the right skill",
         "Stop" => "Closing native session state",
         "SubagentStop" => "Closing subagent lifecycle",
+        "TaskCreated" => "Recording task creation in workflow ledger",
+        "TaskCompleted" => "Recording task completion in workflow ledger",
         "PreCompact" => "Checkpointing before compaction",
         "PostCompact" => "Resuming after compaction",
         "SessionStart" => "Preparing native session state",
@@ -90,11 +103,14 @@ mod tests {
         for expected in [
             "PreToolUse",
             "PostToolUse",
+            "PostToolUseFailure",
             "PermissionRequest",
             "Notification",
             "UserPromptSubmit",
             "Stop",
             "SubagentStop",
+            "TaskCreated",
+            "TaskCompleted",
             "PreCompact",
             "PostCompact",
             "SessionStart",

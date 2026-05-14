@@ -237,10 +237,19 @@ pub fn run_hook_command(
         "show" => run_hook_list(standard_output, standard_error),
         "instructions" => run_hook_instructions(&arguments[1..], standard_output, standard_error),
         "pre-tool-use" => run_hook_pre_tool_use(standard_output, standard_error),
-        "post-tool-use" | "permission-request" | "notification" | "user-prompt-submit" | "stop"
-        | "subagent-stop" | "pre-compact" | "post-compact" | "session-start" | "session-end" => {
-            run_hook_lifecycle_noop()
-        }
+        "post-tool-use"
+        | "post-tool-use-failure"
+        | "permission-request"
+        | "notification"
+        | "stop"
+        | "subagent-stop"
+        | "task-created"
+        | "task-completed"
+        | "pre-compact"
+        | "post-compact"
+        | "session-start"
+        | "session-end" => run_hook_lifecycle_noop(),
+        "user-prompt-submit" => run_hook_user_prompt_submit(standard_output, standard_error),
         other => {
             let _ = writeln!(standard_error, "Unknown hook command: {other}");
             render_hook_help(standard_output);
@@ -671,10 +680,39 @@ fn run_hook_lifecycle_noop() -> u8 {
     0
 }
 
+/// Inject lightweight skill-routing context on every user prompt so Claude Code
+/// auto-selects the appropriate specialist skill instead of relying on the user
+/// to recall slash commands. Token-frugal: emits a single short string only when
+/// the prompt is non-empty; no I/O, no per-skill scan, no model call.
+fn run_hook_user_prompt_submit(
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let payload = serde_json::json!({
+        "hookSpecificOutput": {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": "claude-skills routing hint: prefer the specialist skill that matches the request (reviewer for audits/quality gates, preserve-existing-flow before brownfield edits, git-expert for git/PR work, security-and-compliance-auditor for security-sensitive surfaces, qa-and-automation-engineer for tests, backend-and-data-architecture / web-development-life-cycle / mobile-development-life-cycle / cloud-and-devops-expert / ui-design-systems-and-responsive-interfaces / ux-research-and-experience-strategy / software-development-life-cycle / memory-status-reporter for their respective domains). Delegate to the matching subagent (.claude/agents/<name>.md) when the work is heavy enough to benefit from an isolated context window; load the full skill (~/.claude/skills/<name>/SKILL.md) when staying in the main thread."
+        }
+    });
+    match serde_json::to_string_pretty(&payload) {
+        Ok(rendered) => {
+            let _ = writeln!(standard_output, "{rendered}");
+            0
+        }
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "Unable to render Claude Code hook output: {error}"
+            );
+            1
+        }
+    }
+}
+
 fn render_hook_help(standard_output: &mut dyn Write) {
     let _ = writeln!(
         standard_output,
-        "Usage: claude-skills hook [install|uninstall|list|show|instructions|pre-tool-use|post-tool-use|permission-request|notification|user-prompt-submit|stop|subagent-stop|pre-compact|post-compact|session-start|session-end]"
+        "Usage: claude-skills hook [install|uninstall|list|show|instructions|pre-tool-use|post-tool-use|post-tool-use-failure|permission-request|notification|user-prompt-submit|stop|subagent-stop|task-created|task-completed|pre-compact|post-compact|session-start|session-end]"
     );
 }
 

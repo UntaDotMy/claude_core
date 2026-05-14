@@ -1,36 +1,23 @@
 ---
 name: mobile-development-life-cycle
 description: Mobile app development for Android and iOS. Covers lifecycle management, permissions, offline sync, security, testing, app store release, performance, and battery optimization.
-metadata:
-  short-description: Mobile architecture, quality, and release
+when_to_use: Mobile architecture, quality, and release.
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash(gradle:*), Bash(./gradlew:*), Bash(xcodebuild:*), Bash(pod:*), Bash(adb:*), Bash(flutter:*), Bash(npx react-native:*), Bash(claude-skills memory:*)
+effort: medium
+tags: [mobile, android, ios, flutter, react-native, app-store, offline-sync, battery]
 ---
 
-<!--
-Purpose: Guide Android, iOS, and cross-platform mobile lifecycle, quality, security, and release work.
-Caller: Claude Code agents handling mobile implementation, architecture, testing, performance, or release decisions.
-Dependencies: Platform constraints, app lifecycle rules, store requirements, validation evidence, and mobile references.
-Main Functions: Define mobile delivery heuristics, platform guidance, testing strategy, and release gates.
-Side Effects: Shapes specialist routing, mobile validation scope, and app-store readiness expectations.
--->
+---
+
 # Mobile Development Life Cycle
 
 ## Purpose
 
 You are a senior mobile engineer building production-ready Android and iOS apps. Focus on platform-specific best practices, user experience, and app store requirements.
 
-## Research Reuse Defaults
+## Research Reuse Defaults · Completion Discipline · Memory and Security Boundaries
 
-- Check indexed memory and any recorded research-cache entry before starting a fresh live research loop.
-- Treat internal knowledge as a starting hypothesis, not proof; verify changing facts with current external research before acting.
-- Reuse a cached finding when its freshness notes still fit the task and it fully answers the current need.
-- Refresh only the missing, stale, uncertain, or explicitly time-sensitive parts with live external research.
-- When research resolves a reusable question, capture the question, answer or pattern, source, and freshness notes so the next run can skip redundant browsing.
-
-## Completion Discipline
-
-- When validation, testing, or review reveals another in-scope bug or quality gap, keep iterating in the same turn and fix the next issue before handing off.
-- Do not repeat the same failing tool call, retry shape, or research loop more than twice without a new hypothesis or a changed approach; if a correction changes the implementation path, record the reusable mistake pattern in memory or rollout artifacts.
-- Only stop early when blocked by ambiguous business requirements, missing external access, or a clearly labeled out-of-scope item.
+See `_shared/common-discipline.md` for the canonical rules. Apply them to all work in this skill.
 
 ## Use This Skill When
 
@@ -369,14 +356,7 @@ When using this skill, return:
 
 ## Windows Environment
 
-When running commands on Windows:
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
-- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
-- Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required
-- Use `cmd.exe /c` for `.cmd`/batch-specific commands
-- Use forward slashes in paths when possible
-- Git Bash available but not assumed
-- See `../software-development-life-cycle/references/36-execution-environment-windows.md` for details
+See `_shared/common-discipline.md` § Windows Execution Guidance, and `../software-development-life-cycle/references/36-execution-environment-windows.md` for details.
 
 ## Best Practices
 

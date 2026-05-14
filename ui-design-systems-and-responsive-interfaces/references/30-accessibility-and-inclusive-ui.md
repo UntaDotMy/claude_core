@@ -33,3 +33,33 @@
 - Validate keyboard interaction patterns against common WAI-ARIA practices where relevant.
 - Include dark/light mode checks for text legibility and control visibility.
 - Include button/CTA state checks (focus/disabled/loading/error) in both modes.
+
+## Semantic HTML
+
+```html
+<header>, <nav>, <main>, <article>, <section>, <aside>, <footer>
+<button> for actions, <a> for navigation
+<h1>-<h6> for headings (logical hierarchy)
+<label> for form inputs
+```
+
+## ARIA (Use Sparingly)
+
+- Use semantic HTML first
+- Add ARIA when HTML semantics insufficient
+- Common: `aria-label`, `aria-describedby`, `aria-live`, `role`
+
+## Keyboard Navigation
+
+- Tab order follows visual order
+- All interactive elements keyboard accessible
+- Escape closes modals/dropdowns
+- Enter/Space activates buttons
+- Arrow keys for custom controls
+
+## Screen Reader Testing
+
+- Test with actual screen readers (NVDA, JAWS, VoiceOver)
+- Ensure logical reading order
+- Verify all content accessible
+- Check form labels and error messages
