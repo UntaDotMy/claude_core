@@ -83,3 +83,29 @@ Common mechanisms:
 - Apply retention and deletion policies.
 - Protect data in transit and at rest.
 - Document data flows and access controls.
+
+## Security Checklist
+
+| Layer | Check |
+|---|---|
+| Input Validation | Validate at system boundaries (user input, APIs, file uploads) |
+| Injection Prevention | Use parameterized queries, escape output, validate commands |
+| Authentication | Verify identity before granting access |
+| Authorization | Check permissions for each action |
+| Secrets Management | Use environment variables or secret managers, never hardcode |
+| Dependencies | Keep updated, check for known vulnerabilities |
+| Error Handling | Don't leak sensitive info in error messages |
+
+## Dependency Management
+
+### Choosing Dependencies
+- Prefer standard library when sufficient
+- Check maintenance status (recent commits, active issues)
+- Consider bundle size impact
+- Evaluate security track record
+
+### Keeping Updated
+- Regular dependency updates
+- Check for security advisories
+- Test after updates
+- Document breaking changes

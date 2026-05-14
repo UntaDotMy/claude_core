@@ -81,3 +81,27 @@ For distributed dependencies:
 - Track cycle time and flow efficiency.
 - Include risk buffer for unknowns.
 - Provide concise status updates with risks, blockers, and decisions needed.
+
+## CI/CD Best Practices
+
+### Continuous Integration
+- Run tests on every commit
+- Fast feedback (< 10 minutes ideal)
+- Fail fast on errors
+- Clear error messages
+
+### Continuous Deployment
+- Automated deployment pipeline
+- Environment parity (dev/staging/prod)
+- Rollback capability
+- Deployment monitoring
+
+## Team Best Practices
+
+1. Read before modifying: understand existing code first
+2. Small commits: focused changes are easier to review
+3. Meaningful messages: commit messages explain why, not what
+4. Code review: get feedback before merging
+5. Documentation: update docs when behavior changes
+6. Backward compatibility: only preserve when explicitly requested
+7. Graceful degradation: handle failures elegantly

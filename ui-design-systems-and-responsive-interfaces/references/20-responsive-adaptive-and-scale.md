@@ -48,3 +48,23 @@
 - Control asset weight, render cost, and layout shift risk.
 - Define rendering priorities for critical content and interactions.
 - Treat layout shift, input delay, and rendering stability as release-gating signals.
+
+## Responsive Patterns
+
+| Pattern | Behavior |
+|---|---|
+| Stack to Row | Vertical on mobile, horizontal on desktop |
+| Hide/Show | Collapse less important content on small screens |
+| Reorder | Change visual order for better mobile UX |
+| Scale | Adjust sizes proportionally |
+| Simplify | Reduce complexity on mobile |
+
+## Breakpoint Example
+
+```css
+/* Mobile first */
+/* Small: 640px+ (sm) */
+/* Medium: 768px+ (md) */
+/* Large: 1024px+ (lg) */
+/* XLarge: 1280px+ (xl) */
+```

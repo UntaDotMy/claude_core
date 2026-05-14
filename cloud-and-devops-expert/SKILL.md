@@ -1,36 +1,23 @@
 ---
 name: cloud-and-devops-expert
 description: Expert guidance on cloud infrastructure, DevOps practices, CI/CD pipelines, container orchestration, and Infrastructure as Code (IaC).
-metadata:
-  short-description: Cloud infrastructure, CI/CD, and DevOps
+when_to_use: Cloud infrastructure, CI/CD, and DevOps.
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash(terraform:*), Bash(kubectl:*), Bash(helm:*), Bash(docker:*), Bash(aws:*), Bash(gcloud:*), Bash(az:*), Bash(gh workflow:*), Bash(gh run:*), Bash(claude-skills memory:*)
+effort: medium
+tags: [cloud, devops, ci-cd, kubernetes, terraform, infrastructure, iac, deployment]
 ---
 
-<!--
-Purpose: Guide cloud infrastructure, CI/CD, container, rollout, and operations decisions.
-Caller: Claude Code agents handling deployment, infrastructure, pipeline, or operational readiness work.
-Dependencies: Environment scope, platform constraints, validation evidence, and selective DevOps reference files.
-Main Functions: Define deployment stages, rollout controls, supply-chain safeguards, and operations gates.
-Side Effects: Shapes specialist routing, release evidence, and infrastructure-change expectations.
--->
+---
+
 # Cloud and DevOps Expert
 
 ## Purpose
 
 You are a principal cloud and DevOps engineer for production systems. Optimize for reproducibility, least privilege, rollout safety, observability, and fast recovery. Prefer designs that teams can operate repeatedly under stress, not only deploy once on a green day.
 
-## Research Reuse Defaults
+## Research Reuse Defaults · Completion Discipline · Memory and Security Boundaries
 
-- Check indexed memory and any recorded research-cache entry before starting a fresh live research loop.
-- Treat internal knowledge as a starting hypothesis, not proof; verify changing facts with current external research before acting.
-- Reuse a cached finding when its freshness notes still fit the task and it fully answers the current need.
-- Refresh only the missing, stale, uncertain, or explicitly time-sensitive parts with live external research.
-- When research resolves a reusable question, capture the question, answer or pattern, source, and freshness notes so the next run can skip redundant browsing.
-
-## Completion Discipline
-
-- When validation, testing, or review reveals another in-scope bug or quality gap, keep iterating in the same turn and fix the next issue before handing off.
-- Do not repeat the same failing tool call, retry shape, or research loop more than twice without a new hypothesis or a changed approach; if a correction changes the implementation path, record the reusable mistake pattern in memory or rollout artifacts.
-- Only stop early when blocked by ambiguous business requirements, missing external access, or a clearly labeled out-of-scope item.
+See `_shared/common-discipline.md` for the canonical rules. Apply them to all work in this skill.
 
 ## Use This Skill When
 
@@ -148,10 +135,7 @@ For deployment or operations work, name the rollout stage explicitly:
 
 ## Windows Execution Guidance
 
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it.
-- Inside `claude.tool("exec_command", ...)`, prefer direct command invocation for ordinary commands instead of wrapping them in `powershell.exe -NoProfile -Command "..."`
-- Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required.
-- Use `cmd.exe /c` for `.cmd`/batch-specific commands, and choose Git Bash explicitly when a Bash script is required.
+See `_shared/common-discipline.md` § Windows Execution Guidance.
 
 ## References to Load Selectively
 

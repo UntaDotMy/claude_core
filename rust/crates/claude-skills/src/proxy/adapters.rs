@@ -33,7 +33,7 @@ pub fn build_adapter_registry() -> AdapterRegistry {
 }
 
 pub fn adapter_names() -> &'static str {
-    "tests, git, search, files, build, lint, containers, logs, project-filters, generic"
+    "tests, git, search, files, build, lint, containers, logs, project-filter, generic"
 }
 
 #[cfg(test)]

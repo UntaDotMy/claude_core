@@ -1,17 +1,14 @@
 ---
 name: preserve-existing-flow
 description: Use when modifying an existing or brownfield codebase where current behavior, original functions, loops, handlers, state machines, transport flows, firmware flows, protocol flows, or source-of-truth ownership must be preserved. This skill forces architecture-first understanding before edits, prevents direct overwrites of existing behavior, and requires new behavior to be layered through the existing owner flow unless the user explicitly approves an ownership migration.
-metadata:
-  short-description: Preserve existing flows before brownfield changes
+when_to_use: Preserve existing flows before brownfield changes.
+allowed-tools: Read, Grep, Glob, Bash(claude-skills flow:*), Bash(claude-skills memory:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*)
+effort: high
+tags: [brownfield, refactor, preservation, ownership, flow-tracing, pre-edit-gate]
 ---
 
-<!--
-Purpose: Preserve existing behavior and ownership paths before changing brownfield systems.
-Caller: Claude Code agents modifying established code, firmware, drivers, transport layers, state machines, UI flows, CLIs, services, or protocol handlers.
-Dependencies: Repository flow tracing, direct caller and callee inspection, validation evidence, and any user-marked read-only references.
-Main Functions: Require flow-first investigation, ownership mapping, safe extension boundaries, and review fail conditions.
-Side Effects: Slows edits until the current owner path, source of truth, and recovery behavior are understood.
--->
+---
+
 # Preserve Existing Flow
 
 ## Purpose

@@ -1,0 +1,172 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook pre-tool-use",
+            "statusMessage": "Transparently rewriting noisy commands via claude-skills run"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook user-prompt-submit",
+            "statusMessage": "Routing prompt to the right skill"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook post-tool-use",
+            "statusMessage": "Recording post-tool lifecycle"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook post-tool-use-failure",
+            "statusMessage": "Recording tool failure for routing and recovery"
+          }
+        ]
+      }
+    ],
+    "TaskCreated": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook task-created",
+            "statusMessage": "Recording task creation in workflow ledger"
+          }
+        ]
+      }
+    ],
+    "TaskCompleted": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook task-completed",
+            "statusMessage": "Recording task completion in workflow ledger"
+          }
+        ]
+      }
+    ],
+    "PermissionRequest": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook permission-request",
+            "statusMessage": "Recording permission lifecycle"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook notification",
+            "statusMessage": "Recording notification lifecycle"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook subagent-stop",
+            "statusMessage": "Closing subagent lifecycle"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook pre-compact",
+            "statusMessage": "Checkpointing before compaction"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook post-compact",
+            "statusMessage": "Resuming after compaction"
+          }
+        ]
+      }
+    ],
+    "SessionStart": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook session-start",
+            "statusMessage": "Preparing native session state"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook session-end",
+            "statusMessage": "Recording session end"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook stop",
+            "statusMessage": "Closing native session state"
+          }
+        ]
+      }
+    ]
+  }
+}

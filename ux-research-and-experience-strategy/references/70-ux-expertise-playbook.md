@@ -67,3 +67,35 @@ Deliver this baseline package first:
 2. Which task/flow is most business-critical right now?
 3. What constraints apply (timeline, compliance, accessibility)?
 4. Do we have existing data/research to reuse before new discovery work?
+
+## Decision Confidence and Recovery Checks
+
+Use these concrete checks before approving UX recommendations:
+
+| Check | Rule |
+|---|---|
+| Primary CTAs describe the outcome | Users should know what happens next without guessing |
+| Requested information is justified | Explain why the product needs it when trust or completion is at stake |
+| Errors preserve progress | Validation, network, or auth failures should not force re-entry of stable information |
+| Recovery paths are explicit | Error states should tell users what went wrong, what they can do next, and whether their prior action succeeded |
+| Loading/empty/success/confirmation states reduce uncertainty | Not just filling space |
+| Brownfield copy preserves familiar domain language | Unless research shows that language itself causes confusion |
+| High-stakes flows earn reassurance | Security, privacy, billing, and destructive actions should answer likely fears before users hesitate |
+| Momentum survives interruptions | If blocked by validation, auth, or connectivity, help users resume without losing context |
+| Decision points show trade-offs | Pricing, plan choice, permissions, and setup options should clarify differences instead of hiding them |
+| The interface teaches just enough | Onboarding, first-run states, and advanced features should reveal complexity progressively |
+
+## Accessibility and Inclusive Design
+
+### Diverse User Considerations
+- Visual impairments (low vision, color blindness, blindness)
+- Motor impairments (limited dexterity, tremors)
+- Cognitive differences (memory, attention, learning)
+- Situational limitations (bright sun, noisy environment, one hand)
+
+### Inclusive Practices
+- Test with diverse users
+- Consider edge cases and stress cases
+- Provide multiple ways to accomplish tasks
+- Don't assume user capabilities
+- Design for flexibility and customization

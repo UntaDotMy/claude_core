@@ -57,3 +57,18 @@ Treat these as warning signals:
 3. Is style coherent with product brand and tone?
 4. Are any decorative effects justified by purpose?
 5. Does the solution avoid one-off pattern drift?
+
+## Anti-Patterns to Avoid
+
+| Anti-Pattern | Why It Hurts |
+|---|---|
+| Removing focus outlines | Breaks keyboard navigation |
+| Hardcoded colors | Breaks theming and maintenance |
+| Duplicate components | Increases drift and debt |
+| Tiny touch targets | Below 44x44px hurts mobile usability |
+| Low contrast | Fails accessibility, strains reading |
+| Div soup | Hurts semantics and assistive tech |
+| Inaccessible modals | Missing focus trap or escape handling |
+| Generic labels | "Click here", "Submit", "OK" reduce confidence |
+| Inconsistent spacing | Breaks visual rhythm and trust |
+| Ignoring mobile | Excludes a large user base |

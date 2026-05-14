@@ -1,36 +1,23 @@
 ---
 name: web-development-life-cycle
 description: Web development for websites and web applications. Covers frontend/backend architecture, performance, SEO, accessibility, security, browser compatibility, and deployment.
-metadata:
-  short-description: Web architecture, quality, and production delivery
+when_to_use: Web architecture, quality, and production delivery.
+allowed-tools: Read, Grep, Glob, Edit, Write, Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(npx:*), Bash(node:*), Bash(vite:*), Bash(next:*), Bash(claude-skills memory:*)
+effort: medium
+tags: [web, frontend, backend, performance, seo, accessibility, browser-compat, deployment]
 ---
 
-<!--
-Purpose: Guide web application architecture, frontend and backend quality, performance, SEO, security, and deployment.
-Caller: Claude Code agents handling website or web application implementation, testing, optimization, or release work.
-Dependencies: Web framework constraints, browser behavior, runtime evidence, validation results, and web references.
-Main Functions: Define web delivery heuristics, architecture patterns, testing strategy, deployment checks, and outputs.
-Side Effects: Shapes web implementation boundaries, validation scope, and production-readiness expectations.
--->
+---
+
 # Web Development Life Cycle
 
 ## Purpose
 
 You are a senior web engineer building production-ready websites and web applications. Focus on performance, accessibility, SEO, security, and cross-browser compatibility.
 
-## Research Reuse Defaults
+## Research Reuse Defaults · Completion Discipline · Memory and Security Boundaries
 
-- Check indexed memory and any recorded research-cache entry before starting a fresh live research loop.
-- Treat internal knowledge as a starting hypothesis, not proof; verify changing facts with current external research before acting.
-- Reuse a cached finding when its freshness notes still fit the task and it fully answers the current need.
-- Refresh only the missing, stale, uncertain, or explicitly time-sensitive parts with live external research.
-- When research resolves a reusable question, capture the question, answer or pattern, source, and freshness notes so the next run can skip redundant browsing.
-
-## Completion Discipline
-
-- When validation, testing, or review reveals another in-scope bug or quality gap, keep iterating in the same turn and fix the next issue before handing off.
-- Do not repeat the same failing tool call, retry shape, or research loop more than twice without a new hypothesis or a changed approach; if a correction changes the implementation path, record the reusable mistake pattern in memory or rollout artifacts.
-- Only stop early when blocked by ambiguous business requirements, missing external access, or a clearly labeled out-of-scope item.
+See `_shared/common-discipline.md` for the canonical rules. Apply them to all work in this skill.
 
 ## Use This Skill When
 
@@ -370,14 +357,7 @@ When using this skill, return:
 
 ## Windows Environment
 
-When running commands on Windows:
-- Use the most direct supported tool surface in the active runtime; use `js_repl` with `claude.tool(...)` only when JavaScript-side orchestration is clearer or the runtime requires it
-- Inside `claude.tool("exec_command", ...)`, prefer direct command strings and avoid wrapping ordinary commands in `powershell.exe -NoProfile -Command "..."`
-- Use PowerShell only for PowerShell cmdlets/scripts or when PowerShell-specific semantics are required
-- Use `cmd.exe /c` for `.cmd`/batch-specific commands
-- Use forward slashes in paths when possible
-- Git Bash available but not assumed
-- See `../software-development-life-cycle/references/36-execution-environment-windows.md` for details
+See `_shared/common-discipline.md` § Windows Execution Guidance, and `../software-development-life-cycle/references/36-execution-environment-windows.md` for details.
 
 ## Best Practices
 

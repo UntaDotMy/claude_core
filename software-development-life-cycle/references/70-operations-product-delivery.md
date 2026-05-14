@@ -59,6 +59,28 @@ Treat docs as part of the deliverable, not optional extras.
 - Mobile: native vs cross-platform trade-off based on UX/performance/team constraints.
 - Web: SSR/SSG/SPA decision based on SEO, performance, and runtime interactivity needs.
 
+## Observability
+
+### Logging
+- Log important events and errors
+- Include context (user ID, request ID, etc.)
+- Use appropriate log levels
+- Don't log sensitive data
+
+### Monitoring
+- Track key metrics (latency, errors, throughput)
+- Set up alerts for anomalies
+- Monitor resource usage
+- Track business metrics
+
+### Debugging
+- Reproduce issue first
+- Use debugger or strategic logging
+- Treat the first suspicious branch as an observation, not as the root cause
+- Trace both the decision path and the override path before proposing a fix
+- Identify who requested the behavior, who decided it, who stored it, and who finalized it
+- Verify fix resolves the authoritative ownership path, not only one local consumer
+
 ## Estimation and Stakeholder Communication
 
 - Provide realistic estimates with confidence ranges.
