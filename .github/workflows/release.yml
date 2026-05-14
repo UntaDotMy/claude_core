@@ -113,9 +113,12 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
-      - uses: actions-rust-lang/setup-rust-toolchain@v1
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          target: ${{ matrix.target }}
+          targets: ${{ matrix.target }}
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
       - name: Install cross-compilation linker
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
@@ -124,6 +127,7 @@ jobs:
           echo "CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc" >> "$GITHUB_ENV"
       - name: Build
         env:
+          RUSTFLAGS: -D warnings
           CLAUDE_SKILLS_BUILD_VERSION: ${{ needs.release-preflight.outputs.build_version }}
         run: cargo build --release --target ${{ matrix.target }}
       - name: Stage release bundle
