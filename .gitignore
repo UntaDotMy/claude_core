@@ -50,4 +50,9 @@ Thumbs.db
 
 # Local planning scratch files
 plan.md
+todo.md
 todo.local.md
+
+# Local validation and flow artifacts
+VALIDATION_REPORT.md
+flow-check.json
