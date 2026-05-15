@@ -4,6 +4,7 @@
 //! Main Functions: install_from_flags, install_from_paths, sync_root_files, sync_skills, sync_agents, publish_native_executable, run_update_command, run_uninstall_command.
 //! Side Effects: Copies managed skill-pack files, writes Claude home config/state, publishes the Rust binary, runs git commands, and removes managed files during uninstall.
 
+use std::collections::BTreeSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -40,6 +41,35 @@ struct SyncStats {
     unchanged: usize,
     #[allow(dead_code)]
     removed: usize,
+}
+
+struct FileTracker<'a> {
+    claude_home: &'a Path,
+    files: BTreeSet<String>,
+}
+
+impl<'a> FileTracker<'a> {
+    fn new(claude_home: &'a Path) -> Self {
+        Self {
+            claude_home,
+            files: BTreeSet::new(),
+        }
+    }
+
+    fn record(&mut self, target: &Path) {
+        if let Ok(relative) = target.strip_prefix(self.claude_home) {
+            let normalized = relative.to_string_lossy().replace('\\', "/");
+            if !normalized.is_empty() {
+                self.files.insert(normalized);
+            }
+        }
+    }
+}
+
+fn read_inventory_set(path: &Path) -> BTreeSet<String> {
+    super::verify::read_inventory_lines(path)
+        .into_iter()
+        .collect()
 }
 
 pub fn install_from_flags(
@@ -82,15 +112,28 @@ pub fn install_from_paths(
 ) -> Result<InstallSummary, String> {
     let layout = discover_repository_layout(repository_root)?;
     ensure_claude_home_directories(claude_home)?;
-    let removed_stale_files = remove_stale_managed_files(claude_home)?;
     remove_deprecated_config_keys(claude_home)?;
-    let synced_root_files = sync_root_files(&layout, claude_home)?;
-    let synced_skills = sync_skills(&layout, claude_home)?;
-    let synced_agents = sync_agents(&layout, claude_home)?;
+
+    let previous_files = read_inventory_set(&managed_files_inventory_path(claude_home));
+    let previous_skills = read_inventory_set(&managed_skills_inventory_path(claude_home));
+    let mut tracker = FileTracker::new(claude_home);
+
+    let synced_root_files = sync_root_files(&layout, claude_home, &mut tracker)?;
+    let synced_skills = sync_skills(&layout, claude_home, &mut tracker)?;
+    let synced_agents = sync_agents(&layout, claude_home, &mut tracker)?;
+
+    let removed_stale_files = remove_orphans(
+        claude_home,
+        &previous_files,
+        &previous_skills,
+        &layout,
+        &tracker,
+    )?;
+
     write_managed_config(claude_home)?;
     let published_executable = publish_native_executable(repository_root, claude_home)?;
     write_install_metadata(build_version, repository_root, claude_home)?;
-    write_inventories(&layout, claude_home)?;
+    write_inventories(&layout, claude_home, &tracker)?;
     Ok(InstallSummary {
         synced_skills,
         synced_agents,
@@ -98,6 +141,40 @@ pub fn install_from_paths(
         removed_stale_files,
         published_executable,
     })
+}
+
+fn managed_files_inventory_path(claude_home: &Path) -> PathBuf {
+    state_directory(claude_home).join("managed-files.txt")
+}
+
+fn managed_skills_inventory_path(claude_home: &Path) -> PathBuf {
+    state_directory(claude_home).join("managed-skills.txt")
+}
+
+fn managed_agents_inventory_path(claude_home: &Path) -> PathBuf {
+    state_directory(claude_home).join("managed-agents.txt")
+}
+
+fn remove_orphans(
+    claude_home: &Path,
+    previous_files: &BTreeSet<String>,
+    previous_skills: &BTreeSet<String>,
+    layout: &RepositoryLayout,
+    tracker: &FileTracker,
+) -> Result<usize, String> {
+    let mut removed = 0;
+    for relative in previous_files.difference(&tracker.files) {
+        let absolute = claude_home.join(relative);
+        if absolute.is_file() {
+            removed += remove_path_if_exists_counted(&absolute)?;
+        }
+    }
+    let current_skills: BTreeSet<String> = layout.skills.iter().map(|s| s.name.clone()).collect();
+    for orphan_skill in previous_skills.difference(&current_skills) {
+        let skill_directory = skills_directory(claude_home).join(orphan_skill);
+        removed += remove_path_if_exists_counted(&skill_directory)?;
+    }
+    Ok(removed)
 }
 
 pub fn write_install_summary(summary: &InstallSummary, output: &mut dyn Write) {
@@ -133,24 +210,33 @@ fn ensure_claude_home_directories(claude_home: &Path) -> Result<(), String> {
     Ok(())
 }
 
-fn remove_stale_managed_files(claude_home: &Path) -> Result<usize, String> {
+fn uninstall_managed_files(claude_home: &Path) -> Result<usize, String> {
     let mut removed_count = 0;
-    let inventory_path = state_directory(claude_home).join("managed-skills.txt");
-    let installed_skills: Vec<String> = super::verify::read_inventory_lines(&inventory_path);
-    for skill_name in installed_skills {
-        let skill_path = skills_directory(claude_home).join(&skill_name);
-        if !skill_path.is_dir() {
-            continue;
+    let file_inventory = read_inventory_set(&managed_files_inventory_path(claude_home));
+    for relative in &file_inventory {
+        let absolute = claude_home.join(relative);
+        if absolute.is_file() {
+            removed_count += remove_path_if_exists_counted(&absolute)?;
         }
+    }
+    let installed_skills = read_inventory_set(&managed_skills_inventory_path(claude_home));
+    for skill_name in &installed_skills {
+        let skill_path = skills_directory(claude_home).join(skill_name);
         removed_count += remove_path_if_exists_counted(&skill_path)?;
     }
-    let inventory_path = state_directory(claude_home).join("managed-agents.txt");
-    let installed_agents: Vec<String> = super::verify::read_inventory_lines(&inventory_path);
-    for agent_name in installed_agents {
-        let agent_path = agents_directory(claude_home).join(&agent_name);
+    let installed_agents = read_inventory_set(&managed_agents_inventory_path(claude_home));
+    for agent_name in &installed_agents {
+        let agent_path = agents_directory(claude_home).join(agent_name);
         removed_count += remove_path_if_exists_counted(&agent_path)?;
         let profile_path = agent_profiles_directory(claude_home).join(format!("{agent_name}.toml"));
         removed_count += remove_path_if_exists_counted(&profile_path)?;
+    }
+    for inventory in [
+        managed_files_inventory_path(claude_home),
+        managed_skills_inventory_path(claude_home),
+        managed_agents_inventory_path(claude_home),
+    ] {
+        let _ = remove_path_if_exists_counted(&inventory)?;
     }
     Ok(removed_count)
 }
@@ -207,6 +293,7 @@ fn sync_directory_delta(
     source_directory: &Path,
     target_directory: &Path,
     stats: &mut SyncStats,
+    tracker: &mut FileTracker,
 ) -> Result<(), String> {
     if !source_directory.is_dir() {
         return Ok(());
@@ -223,7 +310,7 @@ fn sync_directory_delta(
             format!("read file type for {}: {error}", display_path(&source_path))
         })?;
         if file_type.is_dir() {
-            sync_directory_delta(&source_path, &target_path, stats)?;
+            sync_directory_delta(&source_path, &target_path, stats, tracker)?;
         } else if file_type.is_file() {
             if target_path.is_file() {
                 if copy_file_if_changed(&source_path, &target_path)? {
@@ -235,6 +322,7 @@ fn sync_directory_delta(
                 copy_file_if_changed(&source_path, &target_path)?;
                 stats.created += 1;
             }
+            tracker.record(&target_path);
         }
     }
     Ok(())
@@ -248,7 +336,11 @@ fn remove_path_if_exists_counted(path: &Path) -> Result<usize, String> {
     Ok(1)
 }
 
-fn sync_root_files(layout: &RepositoryLayout, claude_home: &Path) -> Result<usize, String> {
+fn sync_root_files(
+    layout: &RepositoryLayout,
+    claude_home: &Path,
+    tracker: &mut FileTracker,
+) -> Result<usize, String> {
     let mut synced_count = 0;
     for root_file_name in &layout.root_files {
         let source_path = layout.root_path.join(root_file_name);
@@ -256,11 +348,16 @@ fn sync_root_files(layout: &RepositoryLayout, claude_home: &Path) -> Result<usiz
         if copy_file_if_changed(&source_path, &target_path)? {
             synced_count += 1;
         }
+        tracker.record(&target_path);
     }
     Ok(synced_count)
 }
 
-fn sync_skills(layout: &RepositoryLayout, claude_home: &Path) -> Result<usize, String> {
+fn sync_skills(
+    layout: &RepositoryLayout,
+    claude_home: &Path,
+    tracker: &mut FileTracker,
+) -> Result<usize, String> {
     let mut synced_count = 0;
     for skill in &layout.skills {
         let target_skill_directory = skills_directory(claude_home).join(&skill.name);
@@ -268,17 +365,22 @@ fn sync_skills(layout: &RepositoryLayout, claude_home: &Path) -> Result<usize, S
         if copy_file_if_changed(&skill.skill_path.join("SKILL.md"), &target_skill_file)? {
             synced_count += 1;
         }
+        tracker.record(&target_skill_file);
         for relative_directory in SKILL_SYNC_DIRECTORIES {
             let source_directory = skill.skill_path.join(relative_directory);
             let target_directory = target_skill_directory.join(relative_directory);
             let mut stats = SyncStats::default();
-            sync_directory_delta(&source_directory, &target_directory, &mut stats)?;
+            sync_directory_delta(&source_directory, &target_directory, &mut stats, tracker)?;
         }
     }
     Ok(synced_count)
 }
 
-fn sync_agents(layout: &RepositoryLayout, claude_home: &Path) -> Result<usize, String> {
+fn sync_agents(
+    layout: &RepositoryLayout,
+    claude_home: &Path,
+    tracker: &mut FileTracker,
+) -> Result<usize, String> {
     let mut synced_count = 0;
     for skill in &layout.skills {
         for agent_config in &skill.agent_configs {
@@ -289,6 +391,7 @@ fn sync_agents(layout: &RepositoryLayout, claude_home: &Path) -> Result<usize, S
             if write_text_if_changed(&target_path, &toml_content)? {
                 synced_count += 1;
             }
+            tracker.record(&target_path);
         }
     }
     Ok(synced_count)
@@ -466,16 +569,19 @@ fn repo_version_from_build_version(manager_version: &str) -> Option<String> {
     }
 }
 
-fn write_inventories(layout: &RepositoryLayout, claude_home: &Path) -> Result<(), String> {
+fn write_inventories(
+    layout: &RepositoryLayout,
+    claude_home: &Path,
+    tracker: &FileTracker,
+) -> Result<(), String> {
     let skill_names: Vec<String> = layout.skills.iter().map(|s| s.name.clone()).collect();
+    write_lines(&managed_skills_inventory_path(claude_home), &skill_names)?;
     write_lines(
-        &state_directory(claude_home).join("managed-skills.txt"),
-        &skill_names,
-    )?;
-    write_lines(
-        &state_directory(claude_home).join("managed-agents.txt"),
+        &managed_agents_inventory_path(claude_home),
         &layout.agent_names,
     )?;
+    let file_paths: Vec<String> = tracker.files.iter().cloned().collect();
+    write_lines(&managed_files_inventory_path(claude_home), &file_paths)?;
     Ok(())
 }
 
@@ -595,7 +701,7 @@ pub fn run_uninstall_command(
         }
     };
     let mut removed_count = 0;
-    match remove_stale_managed_files(&claude_home) {
+    match uninstall_managed_files(&claude_home) {
         Ok(count) => removed_count += count,
         Err(error) => {
             let _ = writeln!(standard_error, "remove managed files failed: {error}");
@@ -751,5 +857,147 @@ mod tests {
         fs::write(root.join("00-skill-routing-and-escalation.md"), "").unwrap();
         fs::write(root.join("reviewer").join("SKILL.md"), "").unwrap();
         root
+    }
+
+    fn unique_paths(name: &str) -> (PathBuf, PathBuf) {
+        let suffix = format!(
+            "{}-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_nanos())
+                .unwrap_or(0),
+            name,
+        );
+        let repo = std::env::temp_dir().join(format!("delta-repo-{suffix}"));
+        let home = std::env::temp_dir().join(format!("delta-home-{suffix}"));
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&home);
+        (repo, home)
+    }
+
+    fn write_skill_with_reference(root: &Path, skill: &str, reference_file: &str) {
+        let skill_dir = root.join(skill);
+        let references_dir = skill_dir.join("references");
+        fs::create_dir_all(&references_dir).unwrap();
+        fs::write(skill_dir.join("SKILL.md"), format!("# {skill}\n")).unwrap();
+        fs::write(references_dir.join(reference_file), "reference body\n").unwrap();
+    }
+
+    fn seed_repo(root: &Path) {
+        fs::create_dir_all(root.join("docs")).unwrap();
+        fs::write(root.join("AGENTS.md"), "agents\n").unwrap();
+        fs::write(root.join("README.md"), "readme\n").unwrap();
+        fs::write(root.join("00-skill-routing-and-escalation.md"), "routing\n").unwrap();
+        fs::write(
+            root.join("docs/runtime-guardrails-and-memory-protocols.md"),
+            "guardrails\n",
+        )
+        .unwrap();
+        fs::write(
+            root.join("docs/open-source-memory-patterns.md"),
+            "patterns\n",
+        )
+        .unwrap();
+        fs::write(root.join("docs/security-audit-status.md"), "audit\n").unwrap();
+    }
+
+    #[test]
+    fn delta_installer_removes_renamed_reference_file() {
+        let (repo, home) = unique_paths("rename");
+        seed_repo(&repo);
+        write_skill_with_reference(&repo, "reviewer", "10-old.md");
+        install_from_paths("dev", &repo, &home).unwrap();
+        let old_file = home.join("skills/reviewer/references/10-old.md");
+        assert!(
+            old_file.is_file(),
+            "first install should have written reference"
+        );
+
+        fs::remove_file(repo.join("reviewer/references/10-old.md")).unwrap();
+        fs::write(
+            repo.join("reviewer/references/11-new.md"),
+            "reference body\n",
+        )
+        .unwrap();
+        install_from_paths("dev", &repo, &home).unwrap();
+
+        assert!(
+            !old_file.is_file(),
+            "renamed reference file must be removed from claude home"
+        );
+        assert!(
+            home.join("skills/reviewer/references/11-new.md").is_file(),
+            "new reference file must be present"
+        );
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn delta_installer_removes_orphaned_skill_directory() {
+        let (repo, home) = unique_paths("orphan-skill");
+        seed_repo(&repo);
+        write_skill_with_reference(&repo, "reviewer", "10-r.md");
+        write_skill_with_reference(&repo, "git-expert", "10-g.md");
+        install_from_paths("dev", &repo, &home).unwrap();
+        let orphan_dir = home.join("skills/git-expert");
+        assert!(orphan_dir.is_dir(), "second skill must install");
+
+        fs::remove_dir_all(repo.join("git-expert")).unwrap();
+        install_from_paths("dev", &repo, &home).unwrap();
+
+        assert!(
+            !orphan_dir.exists(),
+            "removed skill must be cleaned up entirely"
+        );
+        assert!(
+            home.join("skills/reviewer/SKILL.md").is_file(),
+            "remaining skill must stay in place"
+        );
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn delta_installer_preserves_unchanged_files_across_installs() {
+        let (repo, home) = unique_paths("unchanged");
+        seed_repo(&repo);
+        write_skill_with_reference(&repo, "reviewer", "10-r.md");
+        install_from_paths("dev", &repo, &home).unwrap();
+
+        let target = home.join("skills/reviewer/references/10-r.md");
+        let mtime_before = fs::metadata(&target).unwrap().modified().unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let summary = install_from_paths("dev", &repo, &home).unwrap();
+        let mtime_after = fs::metadata(&target).unwrap().modified().unwrap();
+
+        assert_eq!(
+            mtime_before, mtime_after,
+            "unchanged file must not be rewritten on second install"
+        );
+        assert_eq!(summary.removed_stale_files, 0);
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn delta_installer_first_install_without_inventory_creates_no_false_orphans() {
+        let (repo, home) = unique_paths("first-install");
+        seed_repo(&repo);
+        write_skill_with_reference(&repo, "reviewer", "10-r.md");
+        let summary = install_from_paths("dev", &repo, &home).unwrap();
+
+        assert_eq!(
+            summary.removed_stale_files, 0,
+            "first install must not delete anything"
+        );
+        assert!(home.join("skills/reviewer/SKILL.md").is_file());
+        assert!(
+            managed_files_inventory_path(&home).is_file(),
+            "per-file inventory must be written"
+        );
+        let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&home);
     }
 }
