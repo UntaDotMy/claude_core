@@ -1,7 +1,7 @@
 //! Purpose: Describe Claude Code hook expectations for token-saving proxy interception.
 //! Caller: hooks module, runner managed-hook payload, doctor checks.
 //! Dependencies: Claude Code settings.json hooks schema.
-//! Main Functions: host_name, required_feature_flag, pre_tool_matcher, events, settings_file_name, lifecycle_subcommand, status_message.
+//! Main Functions: host_name, required_feature_flag, pre_tool_matcher, post_tool_matcher, events, settings_file_name, lifecycle_subcommand, status_message.
 //! Side Effects: None.
 
 pub const HOST: &str = "claude";
@@ -49,6 +49,13 @@ pub const fn required_feature_flag() -> &'static str {
 /// The PreToolUse matcher that scopes our command-rewriting hook to shell invocations.
 /// Claude Code uses the exact tool name `Bash` for its built-in shell tool.
 pub const fn pre_tool_matcher() -> &'static str {
+    "Bash"
+}
+
+/// The PostToolUse matcher that scopes our post-shell lifecycle hook to Bash results.
+/// Other tool surfaces (Read, Edit, Glob, Grep, Task, etc.) have no shell output to record,
+/// so an empty matcher would just spawn the hook handler on every tool call for no benefit.
+pub const fn post_tool_matcher() -> &'static str {
     "Bash"
 }
 
