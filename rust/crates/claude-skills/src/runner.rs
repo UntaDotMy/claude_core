@@ -763,7 +763,22 @@ fn session_start_context() -> String {
 fn user_prompt_submit_context() -> String {
     format!(
         "Before answering this prompt, apply claude-skills automatically.\n\
-        1. Route specialist work: use the relevant installed skill guidance; preserve-existing-flow is mandatory before existing-source edits; reviewer is mandatory before closing work.\n\
+        1. Route to the specialist skill that matches the request: \
+        reviewer for audits/quality gates, \
+        preserve-existing-flow before brownfield edits, \
+        git-expert for git/PR work, \
+        security-and-compliance-auditor for security-sensitive surfaces, \
+        qa-and-automation-engineer for tests, \
+        backend-and-data-architecture for backend/API/database/messaging, \
+        web-development-life-cycle for websites and web apps, \
+        mobile-development-life-cycle for Android/iOS, \
+        cloud-and-devops-expert for IaC/CI-CD/Kubernetes, \
+        ui-design-systems-and-responsive-interfaces for UI components/responsive layout/accessibility, \
+        ux-research-and-experience-strategy for user research/journey mapping, \
+        software-development-life-cycle for cross-domain coordination, \
+        memory-status-reporter for memory health questions. \
+        Delegate to the matching .claude/agents/<name>.md subagent when the work is heavy enough to benefit from an isolated context window; otherwise load the full skill from ~/.claude/skills/<name>/SKILL.md in the main thread. \
+        preserve-existing-flow is mandatory before existing-source edits; reviewer is mandatory before closing work.\n\
         2. Memory first: consult the workspace system map and relevant memories before acting on repo structure or user/project preferences; save durable facts learned from the user.\n\
         3. Workflow proof: for non-trivial work, keep workflow/proof state current and run the narrowest useful validation.\n\
         4. Review closeout: do not present code work as complete until review/pre-pr gates and validation evidence are current.\n\n{}",
@@ -859,36 +874,6 @@ fn sanitize_memory_key(value: &str) -> String {
         "workspace".to_string()
     } else {
         trimmed
-    }
-}
-
-/// Inject lightweight skill-routing context on every user prompt so Claude Code
-/// auto-selects the appropriate specialist skill instead of relying on the user
-/// to recall slash commands. Token-frugal: emits a single short string only when
-/// the prompt is non-empty; no I/O, no per-skill scan, no model call.
-#[allow(dead_code)]
-fn run_hook_user_prompt_submit(
-    standard_output: &mut dyn Write,
-    standard_error: &mut dyn Write,
-) -> u8 {
-    let payload = serde_json::json!({
-        "hookSpecificOutput": {
-            "hookEventName": "UserPromptSubmit",
-            "additionalContext": "claude-skills routing hint: prefer the specialist skill that matches the request (reviewer for audits/quality gates, preserve-existing-flow before brownfield edits, git-expert for git/PR work, security-and-compliance-auditor for security-sensitive surfaces, qa-and-automation-engineer for tests, backend-and-data-architecture / web-development-life-cycle / mobile-development-life-cycle / cloud-and-devops-expert / ui-design-systems-and-responsive-interfaces / ux-research-and-experience-strategy / software-development-life-cycle / memory-status-reporter for their respective domains). Delegate to the matching subagent (.claude/agents/<name>.md) when the work is heavy enough to benefit from an isolated context window; load the full skill (~/.claude/skills/<name>/SKILL.md) when staying in the main thread."
-        }
-    });
-    match serde_json::to_string_pretty(&payload) {
-        Ok(rendered) => {
-            let _ = writeln!(standard_output, "{rendered}");
-            0
-        }
-        Err(error) => {
-            let _ = writeln!(
-                standard_error,
-                "Unable to render Claude Code hook output: {error}"
-            );
-            1
-        }
     }
 }
 
@@ -1883,6 +1868,18 @@ mod tests {
         assert!(context.contains("preserve-existing-flow"));
         assert!(context.contains("Memory first"));
         assert!(context.contains("review"));
+        assert!(
+            context.contains("reviewer for audits/quality gates"),
+            "user-prompt-submit context must include per-skill routing hints so Claude can auto-select the matching specialist without slash commands"
+        );
+        assert!(
+            context.contains("git-expert for git/PR work"),
+            "git-expert routing hint missing"
+        );
+        assert!(
+            context.contains("security-and-compliance-auditor for security-sensitive surfaces"),
+            "security-and-compliance-auditor routing hint missing"
+        );
     }
 
     #[test]

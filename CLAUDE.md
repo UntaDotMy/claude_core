@@ -46,7 +46,7 @@ Each specialist contains three artifacts:
 
 ## Routing Rules
 
-1. Auto-routing is wired through the `UserPromptSubmit` hook — Claude Code receives a routing hint on every prompt and selects the matching skill without manual slash commands.
+1. Auto-routing is wired through the `UserPromptSubmit` hook — Claude Code receives per-skill routing hints on every prompt (e.g. "reviewer for audits/quality gates", "git-expert for git/PR work") and selects the matching specialist without manual slash commands.
 2. Run `preserve-existing-flow` before editing any existing source file.
 3. Run `reviewer` before closing any work.
 4. Delegate to the matching `.claude/agents/<name>.md` subagent for heavy work that benefits from an isolated context window (saves main-thread tokens).
