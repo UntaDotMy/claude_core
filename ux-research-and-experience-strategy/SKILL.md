@@ -7,8 +7,6 @@ effort: medium
 tags: [ux, research, journey-mapping, usability, experience-strategy, user-testing]
 ---
 
----
-
 # UX Research and Experience Strategy
 
 ## Purpose

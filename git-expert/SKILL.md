@@ -7,8 +7,6 @@ effort: medium
 tags: [git, version-control, branching, pull-request, merge, conflict-resolution]
 ---
 
----
-
 # Git Expert
 
 ## Purpose

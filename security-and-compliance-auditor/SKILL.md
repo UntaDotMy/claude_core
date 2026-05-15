@@ -7,8 +7,6 @@ effort: high
 tags: [security, audit, compliance, soc2, gdpr, threat-modeling, vulnerability]
 ---
 
----
-
 # Security and Compliance Auditor
 
 ## Purpose

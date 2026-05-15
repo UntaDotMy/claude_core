@@ -7,8 +7,6 @@ effort: high
 tags: [sdlc, architecture, planning, lifecycle, cross-domain, delivery]
 ---
 
----
-
 # Software Development Life Cycle
 
 ## Purpose

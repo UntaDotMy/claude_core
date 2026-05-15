@@ -7,8 +7,6 @@ effort: high
 tags: [brownfield, refactor, preservation, ownership, flow-tracing, pre-edit-gate]
 ---
 
----
-
 # Preserve Existing Flow
 
 ## Purpose

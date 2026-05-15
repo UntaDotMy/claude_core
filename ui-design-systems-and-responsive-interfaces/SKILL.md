@@ -7,8 +7,6 @@ effort: medium
 tags: [ui, design-system, responsive, accessibility, wcag, components, tokens]
 ---
 
----
-
 # UI Design Systems and Responsive Interfaces
 
 ## Purpose

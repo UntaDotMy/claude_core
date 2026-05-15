@@ -7,8 +7,6 @@ effort: medium
 tags: [mobile, android, ios, flutter, react-native, app-store, offline-sync, battery]
 ---
 
----
-
 # Mobile Development Life Cycle
 
 ## Purpose
