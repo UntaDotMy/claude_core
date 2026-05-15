@@ -34,24 +34,7 @@ See `_shared/common-discipline.md` for the canonical rules. Apply them to all wo
 6. **State-Aware**: Base recommendations on the actual repository state, branch ancestry, and remote topology
 7. **Scope Clarity**: Confirm repository path, worktree, branch, remote, PR, or issue target before mutating state when the scope is ambiguous
 
-## Common Git Workflows
-
-### Daily Development
-```bash
-# Start new feature
-git checkout -b feat/new-feature
-
-# Make changes, stage, commit
-git add <files>
-git commit -m "Add feature X"
-
-# Push to remote
-git push origin feat/new-feature
-
-# Create pull request (via GitHub/GitLab UI or CLI)
-```
-
-### Issue-Driven Worktree Flow
+## Issue-Driven Worktree Flow
 
 Use one narrow lane per issue or feature so review, validation, and rollback stay easy to reason about:
 - Start from an issue, ticket, or written task ID before creating the branch so the scope is explicit.
@@ -59,18 +42,12 @@ Use one narrow lane per issue or feature so review, validation, and rollback sta
 - Prefer one `git worktree` per active issue or feature instead of stacking unrelated work on one checkout.
 - Keep the branch feature-by-feature: one user story, one reviewable PR, one validation packet.
 - Run the narrowest proving validation before push, then let CI and CD gates decide promotion beyond local checks.
-- When a change touches workflows, release automation, or build entrypoints, verify the referenced paths are tracked with `git ls-files --error-unmatch`, check ignore coverage with `git check-ignore -v --no-index`, rerun the repo-native validation uncached when local results are part of the push decision, and use `gh run view --job --log` or `gh pr checks --watch` when GitHub auth is available so local success does not hide a hosted failure.
+- When a change touches workflows, release automation, or build entrypoints, verify referenced paths are tracked with `git ls-files --error-unmatch`, check ignore coverage with `git check-ignore -v --no-index`, rerun the repo-native validation uncached when local results are part of the push decision, and use `gh run view --job --log` or `gh pr checks --watch` when GitHub auth is available so local success does not hide a hosted failure.
 - Keep every push clean: stage only intended files, exclude generated secrets or sensitive data, and avoid unrelated churn.
 
-Example:
-```bash
-git fetch origin
-git worktree add ../repo-issue-123 -b feat/issue-123 origin/main
-cd ../repo-issue-123
-git status
-```
+See `references/20-issue-branch-pr-flow.md` for the full worktree, branch, and PR walkthrough.
 
-### Feature Branch and Merge Request Discipline
+## Feature Branch and Merge Request Discipline
 
 - One feature = one branch = one merge request.
 - Never mix unrelated features or fixes in the same branch.
@@ -80,328 +57,58 @@ git status
 - Run `claude-skills git-workflow preflight --repo-root . --base-ref origin/main` before push or merge-request creation.
 - Request a split when the diff cannot be described as one cohesive feature.
 
-### Branching Strategy
-- **main/master**: Production-ready code
-- **develop**: Integration branch (optional)
-- **feat/***: New features under the tracked one-feature delivery rule
-- **fix/***: Bug fixes under the tracked one-feature delivery rule
-- **improve/***: Improvements under the tracked one-feature delivery rule
-- **add/***: Additive feature work under the tracked one-feature delivery rule
-- **hotfix/***: Urgent production fixes
-- **release/***: Release preparation
+## Branch Naming and Commit Format
 
-### Commit Best Practices
-- **Atomic**: One logical change per commit
-- **Descriptive**: Clear message explaining what and why
-- **Authorship**: Use the configured Git `user.name` and `user.email` for commit author identity; do not substitute assistant or tool branding for the author name
-- **Format**:
-  ```
-  Short summary (50 chars or less)
+**Branch prefixes** (one feature, one branch, one PR):
+- `feat/*` new feature · `fix/*` bug fix · `improve/*` improvement · `add/*` additive work
+- `hotfix/*` urgent production fix · `release/*` release prep
 
-  Detailed explanation if needed (wrap at 72 chars)
-  - Bullet points for multiple changes
-  - Reference issues: Fixes #123
-  ```
-- **Tracked Feature Prefixes**:
-  - `feat:` New feature
-  - `fix:` Bug fix
-  - `improve:` Improvement
-  - `add:` Additive feature work
-  - Use scoped forms such as `feat(scope): ...` when helpful
-
-## Essential Git Commands
-
-### Inspecting State
-```bash
-git status                    # Current state
-git log --oneline -10        # Recent commits
-git diff                     # Unstaged changes
-git diff --staged            # Staged changes
-git branch -a                # All branches
-git remote -v                # Remote repositories
-```
-
-### Staging & Committing
-```bash
-git add <file>               # Stage specific file
-git add .                    # Stage all changes (use carefully)
-git commit -m "message"      # Commit with message
-```
-
-### Branching
-```bash
-git branch <name>            # Create branch
-git switch <name>            # Switch branch
-git switch -c <name>         # Create and switch
-git branch -d <name>         # Delete merged branch
-git branch -D <name>         # Force delete branch
-```
-
-### Remote Operations
-```bash
-git fetch                    # Download remote changes
-git pull                     # Fetch + merge
-git push                     # Upload commits
-git push -u origin <branch>  # Push and set upstream
-```
-
-### Merging & Rebasing
-```bash
-git merge <branch>           # Merge branch
-git rebase <branch>          # Rebase onto branch
-git merge --abort            # Abort merge
-git rebase --abort           # Abort rebase
-```
-
-## Handling Conflicts
-
-### Merge Conflicts
-1. **Identify**: `git status` shows conflicted files
-2. **Open Files**: Look for conflict markers:
-   ```
-   <<<<<<< HEAD
-   Your changes
-   =======
-   Their changes
-   >>>>>>> branch-name
-   ```
-3. **Resolve**: Edit file to keep desired changes, remove markers
-4. **Stage**: `git add <file>`
-5. **Complete**: `git commit` (merge) or `git rebase --continue` (rebase)
-
-### Conflict Resolution Strategies
-- **Accept Yours**: `git checkout --ours <file>`
-- **Accept Theirs**: `git checkout --theirs <file>`
-- **Manual**: Edit file to combine changes
-- **Abort**: `git merge --abort` or `git rebase --abort`
-
-## Undoing Changes
-
-### Unstaged Changes
-```bash
-git restore <file>           # Discard changes (Git 2.23+)
-```
-
-### Staged Changes
-```bash
-git restore --staged <file>  # Unstage (Git 2.23+)
-git reset HEAD <file>        # Unstage (older Git)
-```
-
-### Committed Changes (Local)
-```bash
-git reset --soft HEAD~1      # Undo commit, keep changes staged
-git reset --mixed HEAD~1     # Undo commit, keep changes unstaged
-```
-
-### Committed Changes (Shared)
-```bash
-git revert <commit>          # Create new commit that undoes changes
-git revert HEAD              # Revert last commit
-git revert <commit1>..<commit2>  # Revert range
-```
-
-**Important**: Use `revert` on shared branches, `reset` only on local branches.
-
-## Advanced Operations
-
-### Cherry-Pick
-```bash
-git cherry-pick <commit>     # Apply specific commit
-git cherry-pick <commit1> <commit2>  # Multiple commits
-```
-
-### Stash
-```bash
-git stash                    # Save changes temporarily
-git stash list               # List stashes
-git stash pop                # Apply and remove latest stash
-git stash apply              # Apply without removing
-git stash drop               # Delete stash
-```
-
-### Reflog (Recovery)
-```bash
-git reflog                   # Show reference log
-git show HEAD@{1}            # Inspect a recent prior state before restoring it
-```
+**Commit format**:
+- Atomic: one logical change per commit
+- Subject ≤ 50 chars, body wrapped at 72 chars, scoped form `feat(scope): ...` when helpful
+- Use the configured Git `user.name` and `user.email`; never substitute assistant or tool branding for the author name. When a repo already has a local or global identity configured, preserve it.
 
 ## High-Risk Operations (Explicit User Approval Only)
 
-Never suggest or run these until you have:
-- inspected the current branch state and whether the branch is shared
-- named the blast radius and rollback plan
-- created a backup ref when history rewrite is involved
-- received explicit user approval for the risky step
+Never suggest or run these until you have inspected the current branch state and whether the branch is shared, named the blast radius and rollback plan, created a backup ref when history rewrite is involved, and received explicit user approval for the risky step.
 
-Examples of high-risk operations:
-```bash
-git commit --amend
-git rebase -i HEAD~3
-git reset --hard HEAD~1
-git push --force-with-lease
-git filter-repo --invert-paths --path <file>
-```
+Examples: `git commit --amend`, `git rebase -i`, `git reset --hard`, `git push --force-with-lease`, `git filter-repo`. Prefer reversible alternatives such as `git revert`, backup branches or tags, and state inspection before history rewrite.
 
-Prefer reversible alternatives such as `git revert`, backup branches or tags, and state inspection before history rewrite.
+See `references/10-safe-git-operations.md` for the full safety taxonomy and `references/40-recovery-and-incident-playbook.md` for recovery procedures (reflog, secret removal, history repair).
 
-## Pull Request Workflow
+## Conflict Resolution
 
-### Creating PR
-1. **Push Branch**: `git push origin feature/branch`
-2. **Create PR**: Via GitHub/GitLab UI or CLI (`gh pr create`)
-3. **Description**: Clear title, detailed description, link issues
-4. **Request Review**: Tag reviewers
-5. **Require CI/CD Evidence**: Do not merge until the required checks are green or the exception is explicitly approved and documented
+When `git status` shows conflicts, resolve in-place by editing files to remove conflict markers, then `git add <file>` and `git commit` (merge) or `git rebase --continue` (rebase). Use `git merge --abort` or `git rebase --abort` to back out cleanly.
 
-### Updating PR
-```bash
-# Make changes
-git add <files>
-git commit -m "Address review feedback"
-git push origin feature/branch  # Updates PR automatically
-```
+See `references/60-merge-conflict-resolution.md` for shortcuts (`--ours`/`--theirs`), strategy choice, and recovery patterns.
 
-### Keeping PR Updated
-```bash
-# Option 1: Merge main into feature
-git checkout feature/branch
-git merge main
-git push
+## Pull Request Hygiene
 
-# Option 2: Rebase feature onto main (cleaner history)
-# Only on a local or explicitly approved unshared branch
-git switch feature/branch
-git rebase main
-git push --force-with-lease  # Required after rebase
-```
+- Push the branch with `-u` to set upstream tracking on first push.
+- Create the PR via `gh pr create` (GitHub) or `glab mr create` (GitLab); keep titles under 70 chars and put detail in the body.
+- Do not merge until required CI/CD checks are green or an exception is explicitly approved and documented.
+- When updating after review, make focused commits and push; rebase only on local or explicitly-approved unshared branches and follow with `--force-with-lease`.
 
-## Repository Hygiene
+See `references/30-review-fix-and-human-handoff.md` for the full review and handoff playbook.
 
-### .gitignore
-Common patterns:
-```
-# Dependencies
-node_modules/
-vendor/
+## Clean Push Hygiene
 
-# Build outputs
-dist/
-build/
-*.pyc
-
-# Environment
-.env
-.env.local
-
-# IDE
-.vscode/
-.idea/
-*.swp
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-```
-
-### Removing Committed Secrets
-```bash
-# Rewrite history only with explicit approval and a rollback plan
-git filter-repo --invert-paths --path <file>
-
-# Or use BFG Repo-Cleaner when that tool is already approved and available
-bfg --delete-files <file>
-git reflog expire --expire=now --all
-git gc --prune=now --aggressive
-```
-
-**Important**: Rotate compromised secrets immediately.
-
-### Cleaning Up
-```bash
-git branch --merged         # List merged branches
-git branch -d <branch>      # Delete merged branch
-git remote prune origin     # Remove stale remote branches
-git gc                      # Garbage collection
-```
-
-### Clean Push Hygiene
 - Verify the diff matches the linked issue or named task before `git push`.
-- Confirm generated files, lockfile churn, fixtures, and snapshots are intentional instead of accidental spillover.
+- Confirm generated files, lockfile churn, fixtures, and snapshots are intentional rather than accidental spillover.
 - Reject pushes that include secrets, credentials, tokens, private keys, `.env` files, customer data, or other sensitive material.
 - Keep CI or CD noise out of the branch unless the task explicitly asked for pipeline changes.
 
-## Git Configuration
-
-### User Setup
-```bash
-git config --global user.name "Your Name"
-git config --global user.email "your.email@example.com"
-```
-
-When a repository already has a local or global Git identity configured, preserve that identity for commits instead of inventing a separate assistant author label.
-
-### Useful Aliases
-```bash
-git config --global alias.st status
-git config --global alias.co checkout
-git config --global alias.br branch
-git config --global alias.ci commit
-git config --global alias.unstage 'reset HEAD --'
-git config --global alias.last 'log -1 HEAD'
-git config --global alias.lg "log --graph --oneline --decorate --all"
-```
-
-### Editor
-```bash
-git config --global core.editor "code --wait"  # VS Code
-git config --global core.editor "vim"          # Vim
-```
-
-## Troubleshooting
-
-### Detached HEAD
-```bash
-# Create branch from current state
-git switch -c new-branch
-
-# Or discard and return to branch
-git switch main
-```
-
-### Merge vs Rebase
-- **Merge**: Preserves history, creates merge commit
-  - Use for: Integrating feature branches, shared branches
-- **Rebase**: Linear history, no merge commits
-  - Use for: Cleaning up local commits, updating feature branch
-  - **Never rebase shared/public branches**
-
-### Force Push Safety
-```bash
-# Safer than --force, fails if remote has new commits
-git push --force-with-lease
-```
-
-### Large Files
-Use Git LFS for large files:
-```bash
-git lfs install
-git lfs track "*.psd"
-git add .gitattributes
-```
-
 ## Reference Files
 
-Deep Git knowledge in references/:
-- `00-git-knowledge-map.md` - Full capability matrix
-- `10-safe-git-operations.md` - Safe operation guidelines
-- `20-issue-branch-pr-flow.md` - Collaborative workflows
-- `30-review-fix-and-human-handoff.md` - Review processes
-- `40-recovery-and-incident-playbook.md` - Recovery procedures
-- `99-source-anchors.md` - Authoritative sources
+Deep Git knowledge in `references/`:
+- `00-git-knowledge-map.md` — Full capability matrix
+- `10-safe-git-operations.md` — Safe operation guidelines and high-risk taxonomy
+- `20-issue-branch-pr-flow.md` — Issue-driven worktree, branch, and PR flow
+- `30-review-fix-and-human-handoff.md` — Review and handoff playbook
+- `40-recovery-and-incident-playbook.md` — Recovery procedures (reflog, secrets, history repair)
+- `50-windows-git-workflows.md` — Windows-specific workflows
+- `60-merge-conflict-resolution.md` — Conflict resolution patterns
+- `99-source-anchors.md` — Authoritative sources
 
 Load references as needed for specific topics.
 
@@ -413,30 +120,12 @@ Load references as needed for specific topics.
 
 ## Windows Environment
 
-See `_shared/common-discipline.md` § Windows Execution Guidance.
-
-For Windows-specific Git workflow details, see `references/50-windows-git-workflows.md` and `../software-development-life-cycle/references/36-execution-environment-windows.md`.
-
-## Best Practices
-
-1. **Commit Often**: Small, logical commits
-2. **Meaningful Messages**: Explain what and why
-3. **Pull Before Push**: Avoid conflicts
-4. **Branch for Features**: Keep main stable
-5. **Review Before Merge**: Code review catches issues
-6. **Test Before Commit**: Don't break the build
-7. **Keep History Clean**: Rebase local branches, squash when appropriate
-8. **Prefer Worktrees For Parallel Features**: Keep issue lanes isolated instead of stacking unrelated changes
-9. **Never Force Push Shared Branches**: Use `--force-with-lease` carefully
-10. **Protect Secrets**: Never commit credentials
-11. **Document Workflow**: Team conventions in README
+See `_shared/common-discipline.md` § Windows Execution Guidance, `references/50-windows-git-workflows.md`, and `../software-development-life-cycle/references/36-execution-environment-windows.md`.
 
 ## Safety Rules
 
 ### Never Do (Without Explicit User Request)
-- Auto-commit changes
-- Auto-push to remote
-- Auto-merge branches
+- Auto-commit, auto-push, or auto-merge changes
 - Force push to shared branches
 - Rewrite public history
 - Delete branches without confirmation

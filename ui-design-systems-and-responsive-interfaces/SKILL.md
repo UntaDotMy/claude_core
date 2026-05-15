@@ -81,74 +81,16 @@ Before proposing a visual direction, assemble a compact packet:
 - style family, color mood, typography mood, density, motion posture, and anti-patterns to avoid
 - implementation constraints: existing brand assets, component library, framework, theme model, browser/device support, and performance budget
 
-Keep the packet implementation-ready:
-- name the primary task path the screen must support before styling details expand
-- include the key failure, empty, and recovery states that the visual system must support
-- reject hardcoded colors, spacing magic numbers, or breakpoint values when design tokens or system constants should own them
+Keep the packet implementation-ready: name the primary task path before styling expands, include the key failure/empty/recovery states the visual system must support, and reject hardcoded colors, spacing magic numbers, or breakpoint values when design tokens or system constants should own them.
 
 ## Operating Stance
 
-### Product-Family and Familiarity
-When the user references an existing product family or benchmark:
-- research the product family before proposing changes
-- preserve the core mental model first: primary navigation landmarks, active work surface, main action area, and recovery cues
-- keep task-critical content calm; decorative chrome is subordinate
-- prefer compact, product-native spacing and restrained theming over unrelated marketing patterns
-- borrow transferable hierarchy and interaction rules, not brand assets or proprietary layouts one-to-one
+- **Product-family fidelity**: when the user references an existing product family or benchmark, research it, preserve the core mental model (primary navigation landmarks, active work surface, main action area, recovery cues), keep task-critical content calm with chrome subordinate, and borrow transferable hierarchy/interaction rules — not brand assets or proprietary layouts one-to-one.
+- **UI/UX ownership**: UI owns visual hierarchy, layout structure, component composition, tokens, interaction states, motion posture, and responsive/accessibility translation. UX owns job-to-be-done, journey shape, decision architecture, friction diagnosis, validation logic, and experiment/rollout questions. When paired, UI translates the approved experience direction into concrete screens, states, and reusable patterns.
+- **Design reasoning** (when prompts are vague or current UI feels generic): map the product into a concrete industry/family, choose a fitting layout pattern, define a taste profile with explicit visual tension, select primary/support/accent/neutral color roles with reasons, specify typography pairing by job (display, reading, numeric/data, UI-control), name 3-5 anti-patterns to reject, prefer benchmark-backed guidance over improvisation.
+- **Flow proof**: walk the primary task path before calling a direction ready, verify failure/empty/loading/recovery states are as deliberate as the happy path, keep brownfield work targeted, validate in component previews/browser/device/screenshot review before implementation-ready.
 
-### UI/UX Ownership Boundary
-- UI owns visual hierarchy, layout structure, component composition, tokens, interaction states, motion posture, and responsive/accessibility translation.
-- UX owns job-to-be-done, journey shape, decision architecture, friction diagnosis, validation logic, and experiment/rollout questions.
-- When paired, UI translates the approved experience direction into concrete screens, states, and reusable patterns.
-
-### Design Reasoning Engine
-When the prompt is vague or the current UI looks generic:
-- map the product into a concrete industry or product family
-- choose a fitting layout pattern for that family
-- define a taste profile with explicit visual tension
-- select one primary color role, one support color role, one accent role, and a neutral system with a clear reason for each
-- specify typography pairing by job: display voice, reading comfort, numeric/data clarity, and UI-control legibility
-- name 3-5 anti-patterns to reject before implementation
-- prefer benchmark-backed guidance over aesthetic improvisation
-
-### Flow Proof and Quality Checks
-Before calling a UI direction ready:
-- walk the primary task path and ensure screen hierarchy keeps that path obvious
-- verify failure, empty, loading, and recovery states are as deliberate as the happy path
-- confirm brownfield work stays targeted to the named screen, component family, or breakpoint
-- validate in component previews, browser checks, real devices, or screenshot review before presenting as implementation-ready
-
-### Platform and Surface Defaults
-| Surface | Priority |
-|---|---|
-| Dashboards and data tools | Scanning, comparison, filter clarity, table legibility, sticky context, low-noise emphasis |
-| Marketing and landing pages | Strong hero, proof, offer framing, social trust, objection handling, repeated CTA rhythm |
-| Onboarding and forms | Reduce cognitive load, chunk information, preserve progress, explain why fields matter, make recovery obvious |
-| Continuity-heavy collaboration | Scanability, stable primary actions, clear state transitions, preserved in-progress work, interruption-safe recovery |
-| Mobile-first consumer flows | Thumb-friendly actions, strong section separation, low-friction checkout, compressed but readable density |
-| Settings, admin, enterprise | Calm hierarchy, explicit destructive-action handling, system-status visibility, predictable navigation landmarks |
-| Empty, sparse, early-stage products | Add structure, proof, examples, or guided next steps so the UI does not feel unfinished |
-
-### Brownfield Redesign
-- Treat existing branding, proven user flows, and reusable components as assets to audit before replacing.
-- Prefer targeted redesigns over full aesthetic rewrites when the problem is local.
-- Preserve what already works: trusted colors, domain language, recognizable navigation, and accessible component behavior.
-- Explicitly state what remains unchanged, what is being modernized, and how regressions will be checked.
-
-### Professional Polish Checks
-Use these concrete checks to avoid interfaces that feel AI-generic or unfinished:
-- No emoji as product UI icons unless explicitly playful by brand choice
-- Clear interactive affordance on clickable cards, rows, and surfaces
-- No hover effects that break layout
-- Light-mode glass or translucent cards stay readable
-- Fixed or floating navigation must reserve space so content does not hide behind bars
-- Brand assets and logos must be accurate
-- CTA hierarchy stays singular: one dominant action per decision point
-- Every polished surface earns its decoration: gradients, glows, blur, shadows, and motion must reinforce hierarchy or brand tone
-- Premium means precise: align radii, border opacity, spacing rhythm, icon stroke weight, and shadow softness
-- Dense interfaces still breathe: dashboards need grouping, row rhythm, and muted secondary text
-- Loading states preserve layout: skeletons, pending buttons, and inline progress should keep dimensions stable
-- The first viewport must explain itself: hero areas, dashboards, and setup flows should immediately communicate what the product is and what the user can do next
+Surface defaults (dashboards, marketing, onboarding, collaboration, mobile-first consumer, settings/admin, sparse early-stage), brownfield-redesign rules, professional-polish checks (no emoji as product icons, clear interactive affordance, no layout-breaking hover, readable light-mode glass, fixed nav reserves space, accurate brand assets, singular CTA hierarchy, decoration earns its place, premium precision in radii/borders/spacing/icon stroke/shadow softness, dense interfaces still breathe, layout-stable loading states, first-viewport explains itself) live in `references/70-ui-expertise-playbook.md` and `references/55-design-intelligence-brownfield-and-component-verification.md`.
 
 ## Reference Map
 
@@ -162,7 +104,7 @@ Use these concrete checks to avoid interfaces that feel AI-generic or unfinished
 | Design intelligence packets, brownfield redesign, component verification | `references/55-design-intelligence-brownfield-and-component-verification.md` |
 | Generator workflow, persistence, automation hooks | `references/57-claude-design-intelligence-generator.md` |
 | Benchmarking, authenticity, anti-patterns | `references/60-real-world-benchmarking-and-authenticity.md` |
-| Vague prompts, expert defaults, scope-safe output | `references/70-ui-expertise-playbook.md` |
+| Vague prompts, expert defaults, scope-safe output, polish checks, surface defaults | `references/70-ui-expertise-playbook.md` |
 | Authoritative sources | `references/99-source-anchors.md` |
 
 ## Design Output Contract
@@ -170,102 +112,46 @@ Use these concrete checks to avoid interfaces that feel AI-generic or unfinished
 When producing UI guidance, provide concrete design direction rather than vague praise:
 - Name the primary user story, screen goal, and main call to action.
 - Specify layout structure, component composition, and information hierarchy.
-- Recommend a design-system direction: style family, color system, typography pairing, icon or illustration posture, and motion rules.
+- Recommend a design-system direction: style family, color system, typography pairing, icon/illustration posture, and motion rules.
 - Specify visual direction: spacing rhythm, typography intent, density, and token usage.
-- Cover key states: default, hover, focus, active, disabled, loading, empty, error, and success.
+- Cover key states: default, hover, focus, active, disabled, loading, empty, error, success.
 - Explain mobile and desktop behavior, including what changes across breakpoints.
 - Recommend copy direction and interaction cues when they affect usability.
-- For known product families, state what should feel familiar to existing users and what must stay unique.
-- For continuity-heavy or stateful flows, specify the primary collection view, active workspace, input/control surface, state transitions, and failure-recovery behavior.
+- For known product families, state what should feel familiar and what must stay unique.
 - Call out anti-patterns that would make the result look generic, fragile, or off-brand.
 - Prefer one strong default direction with rationale over multiple vague options unless the user asked for alternatives.
 - End with an implementation-ready summary that names what was validated, what still needs coded proof, and what should stay unchanged in a brownfield surface.
 
-## Claude Code-Native Generator Workflow
+## Generator Workflow
 
-When you need a structured starting point instead of freeform design guessing, use the native design-intelligence command first:
+When you need a structured starting point instead of freeform design guessing, use:
 
 ```bash
 claude-skills design-intelligence recommend "fintech banking dashboard with secure transfers"
 ```
 
-Useful variants:
-
-```bash
-# JSON output for downstream automation or tests
-claude-skills design-intelligence recommend "healthcare clinic onboarding" --format json
-
-# Stack-aware recommendations for real implementation constraints
-claude-skills design-intelligence recommend "AI workspace for research copilots" --stack nextjs --component-library shadcn --format json
-
-# Persist a master design system and a page-specific override safely
-claude-skills design-intelligence recommend \
-  "ecommerce checkout optimization" \
-  --persist \
-  --project-name "Storefront Revamp" \
-  --page "Checkout Flow"
-```
-
-Use the generator to produce a first-pass packet, then refine it with repo evidence, brownfield constraints, real validation signals, professional polish checks, and recovery-state review before implementing.
+Variants and persistence flags are documented in `references/57-claude-design-intelligence-generator.md`. Use the generator to produce a first-pass packet, then refine it with repo evidence, brownfield constraints, real validation signals, polish checks, and recovery-state review before implementing.
 
 ## Benchmarking for Better Taste
 
-To push quality beyond generic output:
-- identify 2-3 reference products from the same trust and product category
-- extract what they do well in hierarchy, spacing, proof placement, navigation, and interaction restraint
-- borrow patterns, not branding; never copy logos, illustrations, or proprietary layouts one-to-one
-- explicitly state what should feel familiar to users and what should differentiate the product
-- if a proposed direction cannot be justified against a real benchmark or product constraint, simplify it
-- when fast visual references help, use curated inspiration indexes such as Shoogle (`https://shoogle.dev/`)
-- treat Shoogle as inspiration and pattern discovery, not as an authoritative accessibility or product-correctness source
+Identify 2-3 reference products from the same trust and product category, extract what they do well in hierarchy/spacing/proof placement/navigation/interaction restraint, borrow patterns (not branding), state what should feel familiar versus what should differentiate. If a proposed direction cannot be justified against a real benchmark or product constraint, simplify it. Curated indexes like `https://shoogle.dev/` are useful for inspiration only — not authoritative for accessibility or product-correctness.
 
 ## Output Expectations
 
 When using this skill, return:
-- the UI brief, primary screen goal, and dominant call to action
-- the recommended visual system direction: layout, hierarchy, color roles, typography, spacing, component posture, and key states
+- the UI brief, primary screen goal, and dominant CTA
+- the recommended visual system direction (layout, hierarchy, color roles, typography, spacing, component posture, key states)
 - the responsive, accessibility, and implementation constraints that shaped the recommendation
-- any inspiration sources or benchmarks used and what was intentionally borrowed versus avoided
-- a clear done statement that names what is complete, what was validated, and what still needs live design review, browser/device checks, or coded implementation
+- inspiration/benchmarks used and what was intentionally borrowed versus avoided
+- a clear done statement naming what is complete, what was validated, and what still needs live design review, browser/device checks, or coded implementation
 
 ## Real-World Scenarios
 
-- **Design System Drift**: Shared components are visually close but behaviorally inconsistent; use this skill to identify the true system boundary and the minimum safe remediation.
-- **Accessibility Before Launch**: A release candidate looks polished but has keyboard, contrast, or screen-reader gaps; use this skill to prioritize fixes by severity and user impact.
-- **Responsive Complexity**: A feature works on desktop but breaks under constrained layouts; use this skill to isolate token, layout, and interaction causes without overfitting one viewport.
-- **Brownfield Modernization**: A product has real users, existing branding, and a few painful surfaces; use this skill to preserve what still works, capture a master design direction, and modernize only the risky or outdated areas.
-- **Familiar Interaction Surface Rehabilitation**: A high-continuity surface feels generic, cluttered, or unlike the product family users expect; use this skill to benchmark the familiar interaction model and rebuild the core hierarchy without copying branding.
-
-## Workflow
-
-### New UI Feature
-| Step | Action |
-|---|---|
-| 1. Understand | Translate request into UI brief with user story, primary action, constraints, states, and acceptance criteria |
-| 2. Audit | Check existing components/patterns |
-| 3. Design | Define hierarchy, layout, spacing, copy direction, and polished default visuals |
-| 4. Implement | Build with design tokens, semantic HTML |
-| 5. Test | Accessibility, responsive, themes, states |
-| 6. Document | Usage guidelines, examples |
-
-### UI Bug/Issue
-| Step | Action |
-|---|---|
-| 1. Reproduce | Verify issue across browsers/devices |
-| 2. Identify | Root cause (CSS, HTML, JS, accessibility) |
-| 3. Fix | Minimal change, maintain consistency |
-| 4. Test | Verify fix, check for regressions |
-| 5. Document | If pattern issue, update guidelines |
-
-### Design System Work
-| Step | Action |
-|---|---|
-| 1. Audit | Review current system usage |
-| 2. Identify | Gaps, inconsistencies, duplicates |
-| 3. Consolidate | Merge duplicates, extract patterns |
-| 4. Document | Clear guidelines and examples |
-| 5. Migrate | Update usage across codebase |
-| 6. Validate | Ensure no regressions |
+- **Design System Drift**: Shared components are visually close but behaviorally inconsistent; identify the true system boundary and the minimum safe remediation.
+- **Accessibility Before Launch**: A release candidate looks polished but has keyboard, contrast, or screen-reader gaps; prioritize fixes by severity and user impact.
+- **Responsive Complexity**: A feature works on desktop but breaks under constrained layouts; isolate token, layout, and interaction causes without overfitting one viewport.
+- **Brownfield Modernization**: Preserve what works, capture a master design direction, modernize only the risky or outdated areas.
+- **Familiar Interaction Surface Rehabilitation**: A high-continuity surface feels generic or unlike the product family users expect; benchmark the familiar interaction model and rebuild the core hierarchy without copying branding.
 
 ## Windows Execution Guidance
 

@@ -37,155 +37,70 @@ See `_shared/common-discipline.md` for the canonical rules. Apply them to all wo
 
 ## Layered Coverage Defaults
 
-- Match tests to the touched layers: unit coverage for business logic, integration coverage for persistence and composed services, contract coverage for boundaries, UI coverage for interaction logic, and end-to-end coverage for critical journeys.
+- Match tests to the touched layers: unit for business logic, integration for persistence and composed services, contract for boundaries, UI for interaction logic, end-to-end for critical journeys.
 - For material regressions, require one realistic higher-layer confirmation in addition to the narrowest regression guard.
 - Keep test files aligned to the module or layer they protect so failures are easy to trace back to backend, API, frontend, worker, or shared-library ownership.
 - Avoid giant catch-all suites when focused layer-specific suites make failures faster to diagnose and maintain.
 
 ## Mandatory Test Ladder
 
-- For release-ready or no-go decisions, run the applicable ladder in this order and treat it as fail-closed:
-  Smoke testing -> Functional testing -> Integration testing -> UI testing -> Load testing -> Stress testing -> Security testing
-- If a rung is truly not applicable, state the reason explicitly. A silent skip, a blocked rung, or a failed rung is no-go.
+- Run the applicable ladder fail-closed in this order: Smoke → Functional → Integration → UI → Load → Stress → Security.
+- A silent skip, a blocked rung, or a failed rung is no-go. A truly not-applicable rung still needs an explicit reason.
 - Do not let a later rung stand in for an earlier one. Passing load or security testing does not waive missing smoke, functional, or integration proof.
-- Map the ladder to the touched surface instead of forcing theater: for example, backend-heavy work may keep UI light, while UI-heavy work may keep load or stress scoped but still explicitly reconciled.
+- Map the ladder to the touched surface instead of forcing theater: backend-heavy work may keep UI light; UI-heavy work may keep load or stress scoped but still explicitly reconciled.
 
 ## Reference Map
 
-Start with the smallest reference set that answers the task:
-
 | Need | Primary Reference |
 |---|---|
-| Skill routing and minimal reference loading | references/00-qa-knowledge-map.md |
-| Risk-based test strategy, coverage shaping, and quality bars | references/10-test-strategy-and-risk-modeling.md |
-| UI, API, contract, and performance practices | references/20-e2e-api-performance-practices.md |
-| Flake triage, release gates, and remediation criteria | references/30-flake-triage-and-release-gates.md |
-| Authoritative docs and standards | references/99-source-anchors.md |
+| Skill routing and minimal reference loading | `references/00-qa-knowledge-map.md` |
+| Risk-based test strategy, coverage shaping, and quality bars | `references/10-test-strategy-and-risk-modeling.md` |
+| UI, API, contract, and performance practices | `references/20-e2e-api-performance-practices.md` |
+| Flake triage, release gates, and remediation criteria | `references/30-flake-triage-and-release-gates.md` |
+| Authoritative docs and standards | `references/99-source-anchors.md` |
 
 ## Delivery Workflow
 
 Before execution, translate the request into a working brief, preserve one top-level plan item per explicit user task, and keep that brief visible while you choose test layers, release gates, and recovery checks.
 
-### 1. Scope the Risk Surface
-- Read the requirement, user story, incident summary, or change request at least twice.
-- Identify the business-critical path, data sensitivity, external dependencies, and rollback risk.
-- Separate deterministic failures from suspected environment drift or intermittent behavior.
-- Map what must be true in production, not just in local mocks.
+1. **Scope the risk surface** — read the requirement twice, identify business-critical path, data sensitivity, external dependencies, and rollback risk; separate deterministic failures from suspected environment drift.
+2. **Build a reproduction packet** — exact steps, seed state, build/commit/runtime/region/flags, timestamps and request IDs, logs/screenshots/traces, expected vs. observed, and frequency. If reproduction is not yet possible, say so explicitly and document the missing evidence.
+3. **Design the test strategy** — choose the lowest-cost layer that catches the failure with confidence (unit/integration/contract/E2E/performance). Tie each chosen layer to a concrete risk, not to habit.
+4. **Execute and observe** — run the narrowest useful test first, expand only after the focused signal is clear. Prefer realistic timing, data, and dependency boundaries over over-mocking. Keep one proving check per patch batch.
+5. **Triage failures** — classify as product defect, flaky automation, test-data instability, environment drift, external dependency, observability gap, or unclear acceptance criteria. Do not merge buckets.
+6. **Verify the fix** — original failure evidenced, root cause identified, targeted test passes for the right reason, adjacent regressions checked, stale state/retries/race conditions exercised when relevant, observability improved if signal was thin, any quarantine/retry/timeout change justified with evidence.
+7. **Apply release gates** — Block: customer-visible critical-path risk, repeatable data-loss path, unexplained high-severity flake, failed/blocked/unjustified-skip on any required ladder rung. Conditional: known lower-risk issue with owner, mitigation, rollback path, explicit acceptance. Ready: critical flows + regressions + quality bars satisfied.
 
-### 2. Build a Reproduction Packet
-Capture enough evidence that another engineer can repeat the failure:
-- exact steps
-- test data or seed state
-- build version, commit, browser/device/runtime, region, and feature flags
-- timestamps, request identifiers, logs, screenshots, traces, and failing assertions
-- expected result versus observed result
-- frequency: always, intermittent, load-dependent, or environment-specific
-
-If reproduction is not yet possible, say so explicitly and document what evidence is still missing.
-
-### 3. Design the Test Strategy
-Choose the lowest-cost layer that can catch the failure with high confidence:
-- unit tests for pure business logic, validators, and calculations
-- integration tests for persistence, queues, background workers, and service composition
-- contract tests for provider-consumer compatibility and schema drift
-- end-to-end tests for critical user journeys and environment wiring
-- performance or soak tests for latency, throughput, resource limits, and degradation behavior
-
-Tie each chosen layer to a concrete risk, not to habit.
-
-### 4. Execute and Observe
-- Run the narrowest useful test first.
-- Expand to adjacent regression coverage only after the focused signal is clear.
-- Prefer realistic timing, data, and dependency boundaries over over-mocking.
-- Use traces, network capture, and logs to explain why a test failed, not just that it failed.
-- Keep proving check per patch batch so every change lands with a narrow, rerunnable validation step before the next batch starts.
-
-### 5. Triage Failures
-Classify each failure:
-- product defect
-- flaky automation
-- test-data instability
-- environment/configuration drift
-- external dependency issue
-- observability gap
-- unclear requirement or acceptance criteria
-
-Do not merge these buckets together; they have different owners and different fixes.
-
-### 6. Verify the Fix
-A fix is not accepted until all of the following are true:
-- the original failure is reproducible or otherwise evidenced
-- the root cause is identified, not guessed
-- the targeted test now passes for the right reason
-- adjacent high-risk regressions are checked
-- stale state, retries, env inheritance, partial cleanup, race conditions, or untrusted input are exercised when they plausibly match the incident
-- observability or diagnostics are improved when the original failure lacked enough signal
-- any quarantine, retry, or timeout changes are justified with evidence
-
-### 7. Apply Release Gates
-Return a clear ship recommendation:
-- Block release: exploitable or customer-visible critical path risk, repeatable data-loss/corruption path, unexplained high-severity flake, failing critical contract/performance gate.
-- Block release: any required rung in the mandatory test ladder failed, remained blocked, or was skipped without a justified not-applicable reason.
-- Conditional release: known lower-risk issue with owner, mitigation, rollback path, and explicit acceptance.
-- Ready: evidence shows critical flows, regressions, and quality bars are satisfied.
-
-## Investigation Workflow
-
-When a failure is complex or intermittent, follow this order:
-
-1. Confirm the expected behavior and acceptance criteria.
-2. Gather runtime evidence from the failing environment before changing the test.
-3. Reduce the failure to the smallest reliable reproduction.
-4. Check recent code, config, dependency, fixture, and infrastructure changes.
-5. Determine whether the fault lives in product code, test code, data, environment, or an external dependency.
-6. Add or tighten the regression guard only after the cause is understood.
-7. Re-run targeted tests, then broader release gates.
-8. Document residual risk if production conditions were not fully reproduced.
-9. For workflow, release, or GitHub Actions failures, rerun the repo-native local proof uncached before trusting green local results, then inspect the hosted pipeline logs with `gh run view --job --log` or `gh pr checks --watch` so a stale test cache cannot hide a clean-runner failure.
+For complex or intermittent failures, follow the investigation order in `references/30-flake-triage-and-release-gates.md`. For workflow/release/GitHub Actions failures, rerun the repo-native local proof uncached before trusting green local results, then inspect hosted logs with `gh run view --job --log` or `gh pr checks --watch`.
 
 ## Real-World Failure Scenarios
 
-Use these to avoid shallow advice:
+Use these to avoid shallow advice (extended scenarios in `references/30-flake-triage-and-release-gates.md`):
 
-- Checkout or billing retries create duplicate writes because the idempotency key is missing or not persisted under timeout pressure.
-- Authentication works in local testing but fails in production when token refresh races with clock skew, tab restore, or background resume.
-- A queue consumer passes unit tests but replays stale messages after deploy because deduplication state is environment-specific.
-- A search or recommendation feature passes with seed data but fails for real users because pagination, rate limits, or empty-state responses were never exercised.
-- A browser test is flaky because the product emits optimistic UI updates before the authoritative server response, creating timing-dependent assertions.
-- A performance test looks green on a local laptop but misses database pool exhaustion, cold starts, or third-party rate limiting in shared staging.
-- A release candidate looks stable until daylight saving, locale, or midnight rollover triggers date logic, certificate rotation, or scheduled job drift.
+- Checkout/billing retries create duplicate writes because the idempotency key isn't persisted under timeout pressure.
+- Auth works locally but fails in production when token refresh races with clock skew, tab restore, or background resume.
+- A queue consumer passes unit tests but replays stale messages because deduplication state is environment-specific.
+- A browser test is flaky because optimistic UI updates emit before the authoritative server response.
+- A performance test looks green on a laptop but misses pool exhaustion, cold starts, or third-party rate limiting in shared staging.
 
 ## Release Gates
 
-Do not mark work complete until you can answer these clearly:
-
-- Requirement traceability: which acceptance criteria map to which tests?
-- Critical-path coverage: which tests protect login, payments, destructive actions, data writes, and recovery paths?
-- Regression safety: what prevents the exact failure from returning?
-- Runtime evidence: what logs, metrics, traces, screenshots, or reports back the conclusion?
-- Performance posture: what thresholds exist, and were they measured in a representative environment?
-- Flake posture: what known flakes remain, what is their severity, and why are they acceptable?
-- Recovery posture: if a test or release gate fails after deploy, what rollback or containment path exists?
+Do not mark work complete until you can answer:
+- **Requirement traceability**: which acceptance criteria map to which tests?
+- **Critical-path coverage**: what protects login, payments, destructive actions, data writes, and recovery paths?
+- **Regression safety**: what prevents the exact failure from returning?
+- **Runtime evidence**: what logs/metrics/traces/screenshots back the conclusion?
+- **Performance posture**: what thresholds exist, and were they measured in a representative environment?
+- **Flake posture**: what known flakes remain, what severity, why acceptable?
+- **Recovery posture**: if a gate fails after deploy, what rollback or containment exists?
 
 ## Remediation Quality Bar
 
-Recommend or approve a QA remediation only when it:
-- fixes the root cause instead of hiding the symptom
-- removes brittle waits, selectors, or data coupling where possible
-- adds or updates regression coverage
-- states assumptions and environmental boundaries
-- names residual risk honestly
-- avoids expanding scope beyond the requested problem
+Recommend or approve a QA remediation only when it fixes the root cause (not symptom), removes brittle waits/selectors/data coupling where possible, adds or updates regression coverage, states assumptions and environmental boundaries, names residual risk honestly, and avoids expanding scope.
 
 ## Runtime Boundaries
 
-Never over-claim confidence in these situations:
-- local-only performance results are not production capacity proof
-- mocked integrations are not proof of contract compatibility
-- passing Chromium tests are not universal browser assurance
-- rerun-to-green is not a valid flake resolution
-- one clean run is not enough for an intermittent high-severity defect
-- absence of telemetry is not proof that the system behaved correctly
+Never over-claim confidence: local-only performance results aren't production capacity proof; mocked integrations aren't contract-compatibility proof; passing Chromium tests aren't universal browser assurance; rerun-to-green isn't valid flake resolution; one clean run isn't enough for an intermittent high-severity defect; absence of telemetry isn't proof of correct behavior.
 
 ## Windows Execution Guidance
 
