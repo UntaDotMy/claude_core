@@ -4,6 +4,38 @@ description: Expert guidance on backend systems, microservices, API design, data
 when_to_use: Backend systems, API design, and data engineering.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(claude-skills memory:*), Bash(git diff:*), Bash(git status), Bash(git log:*), Bash(cargo:*), Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(go:*), Bash(python:*), Bash(uv:*), Bash(pytest:*)
 effort: medium
+paths:
+  - "**/*.go"
+  - "**/*.py"
+  - "**/*.rb"
+  - "**/*.rs"
+  - "**/*.java"
+  - "**/*.kt"
+  - "**/*.cs"
+  - "**/*.php"
+  - "**/*.scala"
+  - "**/*.ex"
+  - "**/*.exs"
+  - "**/*.sql"
+  - "**/*.prisma"
+  - "**/*.proto"
+  - "**/*.graphql"
+  - "**/*.gql"
+  - "**/migrations/**"
+  - "**/schema.rb"
+  - "**/schema.sql"
+  - "**/Cargo.toml"
+  - "**/go.mod"
+  - "**/requirements.txt"
+  - "**/pyproject.toml"
+  - "**/Gemfile"
+  - "**/pom.xml"
+  - "**/build.gradle"
+  - "**/build.gradle.kts"
+  - "**/openapi.yaml"
+  - "**/openapi.yml"
+  - "**/swagger.yaml"
+  - "**/swagger.yml"
 ---
 
 # Backend and Data Architecture
