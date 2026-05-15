@@ -512,26 +512,7 @@ fn session_start_context() -> String {
 
 fn user_prompt_submit_context() -> String {
     format!(
-        "Before answering this prompt, apply claude-skills automatically.\n\
-        1. Route to the specialist skill that matches the request: \
-        reviewer for audits/quality gates, \
-        preserve-existing-flow before brownfield edits, \
-        git-expert for git/PR work, \
-        security-and-compliance-auditor for security-sensitive surfaces, \
-        qa-and-automation-engineer for tests, \
-        backend-and-data-architecture for backend/API/database/messaging, \
-        web-development-life-cycle for websites and web apps, \
-        mobile-development-life-cycle for Android/iOS, \
-        cloud-and-devops-expert for IaC/CI-CD/Kubernetes, \
-        ui-design-systems-and-responsive-interfaces for UI components/responsive layout/accessibility, \
-        ux-research-and-experience-strategy for user research/journey mapping, \
-        software-development-life-cycle for cross-domain coordination, \
-        memory-status-reporter for memory health questions. \
-        Delegate to the matching .claude/agents/<name>.md subagent when the work is heavy enough to benefit from an isolated context window; otherwise load the full skill from ~/.claude/skills/<name>/SKILL.md in the main thread. \
-        preserve-existing-flow is mandatory before existing-source edits; reviewer is mandatory before closing work.\n\
-        2. Memory first: consult the workspace system map and relevant memories before acting on repo structure or user/project preferences; save durable facts learned from the user.\n\
-        3. Workflow proof: for non-trivial work, keep workflow/proof state current and run the narrowest useful validation.\n\
-        4. Review closeout: do not present code work as complete until review/pre-pr gates and validation evidence are current.\n\n{}",
+        "Apply claude-skills automatically: route to the matching skill in ~/.claude/skills/ (preserve-existing-flow before brownfield edits; reviewer before closeout); delegate to the .claude/agents/<name>.md subagent when the work is heavy enough to benefit from isolated context. Memory first, then workflow proof for non-trivial work, then review gates before claiming done.\n\n{}",
         memory_scope_summary()
     )
 }
@@ -1250,18 +1231,18 @@ mod tests {
         assert!(context.contains("review"));
 
         assert!(
-            context.contains("reviewer for audits/quality gates"),
-            "user-prompt-submit context must include per-skill routing hints so Claude can auto-select the matching specialist without slash commands"
+            context.contains("~/.claude/skills/"),
+            "user-prompt-submit context must point at the installed skills directory so Claude routes via the Skill tool rather than inline enumeration"
         );
 
         assert!(
-            context.contains("git-expert for git/PR work"),
-            "git-expert routing hint missing"
+            context.contains("reviewer before closeout"),
+            "reviewer closeout discipline must remain mandatory"
         );
 
         assert!(
-            context.contains("security-and-compliance-auditor for security-sensitive surfaces"),
-            "security-and-compliance-auditor routing hint missing"
+            !context.contains("git-expert for git/PR work"),
+            "per-skill routing enumeration should be dropped — Claude Code lists installed skills via the Skill tool"
         );
     }
 
