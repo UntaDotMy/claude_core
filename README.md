@@ -149,7 +149,36 @@ Hooks are wired automatically by `install`. If you want to refresh `~/.claude/se
 ~/.claude/claude-skills.exe hook install
 ```
 
-Set `CLAUDE_SKILLS_VERSION=vX.Y.Z` on the bootstrap installer to pin a specific release tag.
+Optional environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `CLAUDE_SKILLS_RAW_RETENTION_DAYS` | `14` | Days of `~/.claude/raw-output/` runs kept on disk. SessionEnd hook prunes anything older. Set to `0` to disable auto-prune. |
+| `CLAUDE_SKILLS_VERSION` | latest | Pin the bootstrap installer to a specific release tag. |
+
+Manual prune (any time):
+
+```bash
+~/.claude/claude-skills.exe raw prune --older-than 30d
+```
+
+### Cache Hygiene and Token Economy
+
+The hook lifecycle is tuned to preserve Claude Code's prompt cache and minimize per-prompt input tokens.
+
+- **What stays cached:** the system prompt, tool definitions, `CLAUDE.md`, and the SessionStart context are read at the cache breakpoint. Reuse costs ~10% of normal input tokens for ~5 minutes after each write.
+- **What gets paid every prompt:** anything emitted via `additionalContext` from `UserPromptSubmit` lands after the cache breakpoint. We emit nothing on `UserPromptSubmit` — the operating contract lives in `CLAUDE.md` and SessionStart instead, where it is paid for once per cache window rather than once per prompt.
+- **What gets paid every turn end / tool call:** `Stop`, `SubagentStop`, `SessionEnd`, and `PostToolUse` are silent. They previously emitted ~50 tokens of generic closeout text that the model never acted on. Your turn-end exchange is now hook-cost zero.
+- **Why this matters:** in a 30-tool-call session with 20 prompts, the previous lifecycle cost ~80×20 + ~50×30 = ~3,100 tokens of pure overhead. The current lifecycle costs zero outside of SessionStart and PreToolUse rewrite hints — both of which carry information the model genuinely uses.
+
+If you customize hooks downstream and want to see exactly what the lifecycle emits for an event:
+
+```bash
+echo '{}' | ~/.claude/claude-skills.exe hook stop
+echo '{}' | ~/.claude/claude-skills.exe hook user-prompt-submit
+```
+
+Empty stdout means the hook is intentionally silent for that event.
 
 ## Find Fast
 
