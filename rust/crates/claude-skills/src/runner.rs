@@ -1465,9 +1465,23 @@ fn build_hooks_payload(hook_path: &Path, hook_command: &str) -> Result<String, S
     ensure_hooks_object(&mut document)?;
     remove_managed_hooks(&mut document);
     append_managed_hooks(&mut document, hook_command)?;
+    ensure_skill_listing_budget_fraction(&mut document)?;
     serde_json::to_string_pretty(&document)
         .map(|rendered| format!("{rendered}\n"))
         .map_err(|error| format!("render hooks config: {error}"))
+}
+
+fn ensure_skill_listing_budget_fraction(document: &mut JsonDocument) -> Result<(), String> {
+    let object = document
+        .as_object_mut()
+        .ok_or_else(|| "settings.json root is not a JSON object".to_string())?;
+    if !object.contains_key("skillListingBudgetFraction") {
+        object.insert(
+            "skillListingBudgetFraction".to_string(),
+            serde_json::json!(0.02),
+        );
+    }
+    Ok(())
 }
 
 fn remove_managed_hook_payload(hook_path: &Path) -> Result<(String, bool), String> {
@@ -1950,5 +1964,49 @@ mod tests {
     fn temp_hook_path(name: &str) -> PathBuf {
         let unique = format!("{}-{}", name, std::process::id());
         std::env::temp_dir().join(unique).join("settings.json")
+    }
+
+    #[test]
+    fn install_writes_default_skill_listing_budget_fraction() {
+        let hook_path = temp_hook_path("claude-skills-skill-budget-default");
+        std::fs::create_dir_all(hook_path.parent().unwrap()).unwrap();
+        std::fs::write(&hook_path, r#"{"hooks": {}}"#).unwrap();
+
+        let pre_tool_command = managed_hook_command().unwrap();
+        let rendered = build_hooks_payload(&hook_path, &pre_tool_command).unwrap();
+        let document: JsonDocument = serde_json::from_str(&rendered).unwrap();
+
+        assert_eq!(
+            document
+                .get("skillListingBudgetFraction")
+                .and_then(JsonDocument::as_f64),
+            Some(0.02),
+        );
+
+        let _ = std::fs::remove_dir_all(hook_path.parent().unwrap());
+    }
+
+    #[test]
+    fn install_preserves_user_skill_listing_budget_fraction() {
+        let hook_path = temp_hook_path("claude-skills-skill-budget-preserve");
+        std::fs::create_dir_all(hook_path.parent().unwrap()).unwrap();
+        std::fs::write(
+            &hook_path,
+            r#"{"hooks": {}, "skillListingBudgetFraction": 0.05}"#,
+        )
+        .unwrap();
+
+        let pre_tool_command = managed_hook_command().unwrap();
+        let rendered = build_hooks_payload(&hook_path, &pre_tool_command).unwrap();
+        let document: JsonDocument = serde_json::from_str(&rendered).unwrap();
+
+        assert_eq!(
+            document
+                .get("skillListingBudgetFraction")
+                .and_then(JsonDocument::as_f64),
+            Some(0.05),
+        );
+
+        let _ = std::fs::remove_dir_all(hook_path.parent().unwrap());
     }
 }
