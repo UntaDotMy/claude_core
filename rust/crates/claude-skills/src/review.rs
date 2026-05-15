@@ -107,8 +107,6 @@ fn run_review_gates_command(
         }
     };
 
-    let mut blocking_findings = 0;
-    let mut warnings = 0;
     let mut gate_results = Vec::new();
 
     // Rust tests (always run for Rust repos)
@@ -134,9 +132,6 @@ fn run_review_gates_command(
                 Some("cargo test --workspace failed".to_string())
             },
         });
-        if !test_passed {
-            blocking_findings += 1;
-        }
     }
 
     // Python checks (if requested and Python files exist)
@@ -175,14 +170,7 @@ fn run_review_gates_command(
         }
     }
 
-    // Calculate totals
-    for result in &gate_results {
-        if result.blocking && result.status == GateStatus::Fail {
-            blocking_findings += 1;
-        } else if result.status == GateStatus::Warn {
-            warnings += 1;
-        }
-    }
+    let (blocking_findings, warnings) = tally_gate_results(&gate_results);
 
     render_gate_results(
         &gate_results,
@@ -197,6 +185,21 @@ fn run_review_gates_command(
     } else {
         0
     }
+}
+
+/// Tally blocking failures and non-blocking warnings from a slice of gate results.
+/// Each gate is counted at most once — blocking failures take precedence over warning status.
+fn tally_gate_results(gate_results: &[GateResult]) -> (i32, i32) {
+    let mut blocking_findings = 0;
+    let mut warnings = 0;
+    for result in gate_results {
+        if result.blocking && result.status == GateStatus::Fail {
+            blocking_findings += 1;
+        } else if result.status == GateStatus::Warn {
+            warnings += 1;
+        }
+    }
+    (blocking_findings, warnings)
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -835,6 +838,7 @@ fn render_generated_message(
         "No diff summary requested.".to_string()
     };
     if message_kind == "commit" {
+        // TODO: Generate commit message from diff instead of using placeholder
         let _ = writeln!(
             standard_output,
             "chore: migrate claude-skills runtime to rust"
@@ -842,6 +846,7 @@ fn render_generated_message(
         let _ = writeln!(standard_output);
         let _ = writeln!(standard_output, "{diff_summary}");
     } else {
+        // TODO: Generate PR body from diff instead of using placeholder
         let _ = writeln!(standard_output, "## Summary");
         let _ = writeln!(
             standard_output,
@@ -988,5 +993,54 @@ mod tests {
 
         // Cleanup
         std::fs::remove_dir_all(&temp).unwrap();
+    }
+
+    #[test]
+    fn tally_counts_each_blocking_failure_once() {
+        let gate_results = vec![
+            GateResult {
+                name: "rust_tests".to_string(),
+                status: GateStatus::Fail,
+                blocking: true,
+                details: None,
+            },
+            GateResult {
+                name: "ruff".to_string(),
+                status: GateStatus::Pass,
+                blocking: true,
+                details: None,
+            },
+            GateResult {
+                name: "prettier".to_string(),
+                status: GateStatus::Warn,
+                blocking: false,
+                details: None,
+            },
+        ];
+
+        let (blocking, warnings) = tally_gate_results(&gate_results);
+
+        assert_eq!(
+            blocking, 1,
+            "exactly one blocking failure should produce blocking_findings=1, not 2 (regression guard for prior double-count bug)"
+        );
+        assert_eq!(warnings, 1);
+    }
+
+    #[test]
+    fn tally_handles_empty_and_all_pass() {
+        let (blocking, warnings) = tally_gate_results(&[]);
+        assert_eq!(blocking, 0);
+        assert_eq!(warnings, 0);
+
+        let all_pass = vec![GateResult {
+            name: "fmt".to_string(),
+            status: GateStatus::Pass,
+            blocking: true,
+            details: None,
+        }];
+        let (blocking, warnings) = tally_gate_results(&all_pass);
+        assert_eq!(blocking, 0);
+        assert_eq!(warnings, 0);
     }
 }
