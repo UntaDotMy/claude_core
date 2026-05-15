@@ -13,12 +13,15 @@ use serde_json::{Map as JsonMap, Value as JsonDocument};
 
 use crate::args::FlagSet;
 use crate::json::{write_indented, Value};
+use crate::proxy::raw_store::RawStore;
 use crate::runner::shell_rewrite::{
     bash_command_for_executable_args, platform_default_command_for_executable_args,
     rewrite_command_text_for_shell, RewriteShell,
 };
 use crate::runtime::{display_path, resolve_claude_home, write_text};
 use crate::utility;
+
+const RAW_OUTPUT_DEFAULT_RETENTION_DAYS: u64 = 14;
 
 const CLAUDE_HOOK_EVENTS: &[&str] = crate::hooks::claude::EVENTS;
 const MANAGED_PRE_TOOL_USE_EVENT: &str = "PreToolUse";
@@ -395,6 +398,10 @@ fn run_hook_lifecycle(
         let _ = refresh_memory_scope_for_current_directory(standard_error);
     }
 
+    if event_name == "SessionEnd" {
+        prune_raw_output_store(standard_error);
+    }
+
     let context = lifecycle_additional_context(subcommand);
 
     if context.trim().is_empty() {
@@ -484,15 +491,18 @@ fn lifecycle_additional_context(subcommand: &str) -> String {
     match subcommand {
         "session-start" => session_start_context(),
 
-        "user-prompt-submit" => user_prompt_submit_context(),
-
-        "post-tool-use" => post_tool_use_context(),
-
         "pre-compact" => pre_compact_context(),
 
         "post-compact" => post_compact_context(),
 
-        "stop" | "subagent-stop" | "session-end" => closeout_context(),
+        // Silenced events. UserPromptSubmit fires on every prompt — paying
+        // full input-token cost for content that already lives in CLAUDE.md
+        // and SessionStart (replayed from transcript on resume). Stop /
+        // SubagentStop / SessionEnd / PostToolUse fire per turn end or per
+        // tool call and emitted generic boilerplate. Emit nothing.
+        "user-prompt-submit" | "stop" | "subagent-stop" | "session-end" | "post-tool-use" => {
+            String::new()
+        }
 
         _ => String::new(),
     }
@@ -511,17 +521,6 @@ fn session_start_context() -> String {
     )
 }
 
-fn user_prompt_submit_context() -> String {
-    format!(
-        "Apply claude-skills automatically: route to the matching skill in ~/.claude/skills/ (preserve-existing-flow before brownfield edits; reviewer before closeout); delegate to the .claude/agents/<name>.md subagent when the work is heavy enough to benefit from isolated context. Memory first, then workflow proof for non-trivial work, then review gates before claiming done.\n\n{}",
-        memory_scope_summary()
-    )
-}
-
-fn post_tool_use_context() -> String {
-    "After each tool result, update claude-skills proof state mentally: if files changed, preserve-existing-flow evidence and review gates must still be satisfied before closeout; if the result introduced durable user/project/reference/feedback knowledge, save it to memory.".to_string()
-}
-
 fn pre_compact_context() -> String {
     "Before compaction, preserve claude-skills continuity: summarize active workflow stage, files changed, validation evidence, unresolved blockers, memory facts to save, and next review gate.".to_string()
 }
@@ -536,8 +535,20 @@ fn post_compact_context() -> String {
     )
 }
 
-fn closeout_context() -> String {
-    "Before final response or session close, enforce claude-skills closeout: complete or leave pending task tracking, save durable memory facts, run reviewer/pre-pr gates for changed code, report validation evidence, and do not claim done with in-progress work or failing checks.".to_string()
+fn prune_raw_output_store(standard_error: &mut dyn Write) {
+    let retention_days = std::env::var("CLAUDE_SKILLS_RAW_RETENTION_DAYS")
+        .ok()
+        .and_then(|value| value.trim().parse::<u64>().ok())
+        .unwrap_or(RAW_OUTPUT_DEFAULT_RETENTION_DAYS);
+    if retention_days == 0 {
+        return;
+    }
+    if let Err(error) = RawStore::new().prune_older_than(retention_days) {
+        let _ = writeln!(
+            standard_error,
+            "claude-skills raw-output prune failed: {error}"
+        );
+    }
 }
 
 fn refresh_memory_scope_for_current_directory(standard_error: &mut dyn Write) -> Option<PathBuf> {
@@ -1243,51 +1254,39 @@ mod tests {
     }
 
     #[test]
-    fn lifecycle_hooks_emit_additional_context() {
-        let mut stdout = Vec::new();
+    fn high_frequency_hooks_emit_no_additional_context() {
+        // UserPromptSubmit fires per prompt; PostToolUse fires per tool call;
+        // Stop/SubagentStop/SessionEnd fire per turn end. Any text we emit on
+        // these events lands after the prompt-cache breakpoint and is paid as
+        // input tokens for every prompt for the rest of the session. The
+        // operating contract belongs in CLAUDE.md and SessionStart, both of
+        // which are paid for once per cache window. These events must stay
+        // silent.
+        for subcommand in [
+            "user-prompt-submit",
+            "post-tool-use",
+            "stop",
+            "subagent-stop",
+            "session-end",
+        ] {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
 
-        let mut stderr = Vec::new();
+            let code = run_hook_lifecycle(subcommand, &mut stdout, &mut stderr);
 
-        let code = run_hook_lifecycle("user-prompt-submit", &mut stdout, &mut stderr);
+            assert_eq!(
+                code,
+                0,
+                "stderr for {subcommand}: {}",
+                String::from_utf8_lossy(&stderr)
+            );
 
-        assert_eq!(code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
-
-        let output: JsonDocument = serde_json::from_slice(&stdout).unwrap();
-
-        let hook_output = output.get("hookSpecificOutput").unwrap();
-
-        assert_eq!(
-            hook_output
-                .get("hookEventName")
-                .and_then(JsonDocument::as_str),
-            Some("UserPromptSubmit")
-        );
-
-        let context = hook_output
-            .get("additionalContext")
-            .and_then(JsonDocument::as_str)
-            .unwrap();
-
-        assert!(context.contains("preserve-existing-flow"));
-
-        assert!(context.contains("Memory first"));
-
-        assert!(context.contains("review"));
-
-        assert!(
-            context.contains("~/.claude/skills/"),
-            "user-prompt-submit context must point at the installed skills directory so Claude routes via the Skill tool rather than inline enumeration"
-        );
-
-        assert!(
-            context.contains("reviewer before closeout"),
-            "reviewer closeout discipline must remain mandatory"
-        );
-
-        assert!(
-            !context.contains("git-expert for git/PR work"),
-            "per-skill routing enumeration should be dropped — Claude Code lists installed skills via the Skill tool"
-        );
+            assert!(
+                stdout.is_empty(),
+                "{subcommand} must emit no additional context to avoid per-prompt token cost; got: {}",
+                String::from_utf8_lossy(&stdout)
+            );
+        }
     }
 
     #[test]
