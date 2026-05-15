@@ -23,6 +23,7 @@ use crate::utility;
 const CLAUDE_HOOK_EVENTS: &[&str] = crate::hooks::claude::EVENTS;
 const MANAGED_PRE_TOOL_USE_EVENT: &str = "PreToolUse";
 const MANAGED_PRE_TOOL_USE_MATCHER: &str = crate::hooks::claude::pre_tool_matcher();
+const MANAGED_POST_TOOL_USE_MATCHER: &str = crate::hooks::claude::post_tool_matcher();
 const MANAGED_PRE_TOOL_USE_COMMAND_SUFFIX: &str = "hook pre-tool-use";
 const MANAGED_PRE_TOOL_USE_STATUS: &str =
     "Transparently rewriting noisy commands via claude-skills run";
@@ -854,8 +855,14 @@ fn managed_hook_entry_for_event(
 
     let subcommand = crate::hooks::claude::lifecycle_subcommand(event);
 
+    let matcher = if event == "PostToolUse" {
+        MANAGED_POST_TOOL_USE_MATCHER
+    } else {
+        ""
+    };
+
     (
-        "",
+        matcher,
         managed_lifecycle_command(subcommand),
         crate::hooks::claude::status_message(event),
     )
@@ -1215,6 +1222,43 @@ mod tests {
         assert!(!is_managed_hook_command(
             "powershell.exe -NoProfile -EncodedCommand SQBuAHYAYQBsAGkAZAA="
         ));
+    }
+
+    #[test]
+    fn pre_and_post_tool_use_matchers_scope_to_bash() {
+        let hook_path = temp_hook_path("claude-skills-hook-matcher-scope");
+
+        std::fs::create_dir_all(hook_path.parent().unwrap()).unwrap();
+
+        std::fs::write(&hook_path, r#"{"hooks": {}}"#).unwrap();
+
+        let rendered = build_hooks_payload(&hook_path, "claude-skills hook pre-tool-use").unwrap();
+
+        let document: JsonDocument = serde_json::from_str(&rendered).unwrap();
+
+        let hooks = document
+            .get("hooks")
+            .and_then(JsonDocument::as_object)
+            .unwrap();
+
+        for (event, expected_matcher) in [
+            ("PreToolUse", "Bash"),
+            ("PostToolUse", "Bash"),
+            ("UserPromptSubmit", ""),
+            ("SessionStart", ""),
+        ] {
+            let matcher = hooks
+                .get(event)
+                .and_then(JsonDocument::as_array)
+                .and_then(|entries| entries.first())
+                .and_then(|entry| entry.get("matcher"))
+                .and_then(JsonDocument::as_str)
+                .unwrap_or_else(|| panic!("missing matcher for {event}"));
+
+            assert_eq!(matcher, expected_matcher, "unexpected matcher for {event}");
+        }
+
+        let _ = std::fs::remove_dir_all(hook_path.parent().unwrap());
     }
 
     #[test]
