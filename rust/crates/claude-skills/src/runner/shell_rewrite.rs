@@ -175,6 +175,10 @@ pub fn rewrite_command_text(command: &str) -> RewriteDecision {
     rewrite_command_text_for_shell(command, RewriteShell::PlatformDefault)
 }
 
+pub fn rewrite_for_doctor(command: &str) -> String {
+    rewrite_command_text(command).rewritten_command
+}
+
 pub fn rewrite_command_text_for_shell(command: &str, shell: RewriteShell) -> RewriteDecision {
     let trimmed = command.trim();
 

@@ -16,6 +16,7 @@ use crate::runtime::{display_path, run_command};
 
 // Re-export the public API callers depend on
 pub use hook_lifecycle::run_hook_command;
+pub use shell_rewrite::rewrite_for_doctor;
 
 pub fn run_run_command(
     arguments: &[String],
