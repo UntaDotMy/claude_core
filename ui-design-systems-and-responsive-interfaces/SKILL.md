@@ -4,7 +4,6 @@ description: UI design systems, responsive layouts, accessibility, and visual de
 when_to_use: UI systems, responsive design, and accessibility.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(npm run:*), Bash(yarn:*), Bash(pnpm:*), Bash(npx storybook:*), Bash(npx playwright:*), Bash(claude-skills design-intelligence:*), Bash(claude-skills memory:*)
 effort: medium
-tags: [ui, design-system, responsive, accessibility, wcag, components, tokens]
 ---
 
 # UI Design Systems and Responsive Interfaces

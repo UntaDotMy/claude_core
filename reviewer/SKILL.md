@@ -4,7 +4,6 @@ description: Production-readiness reviewer and quality gate. Validates code qual
 when_to_use: Production-readiness review and quality gate.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git log:*), Bash(git status), Bash(git show:*), Bash(cargo check:*), Bash(cargo clippy:*), Bash(cargo test:*), Bash(cargo fmt:*), Bash(claude-skills review:*), Bash(claude-skills memory:*), Bash(gh pr view:*), Bash(gh pr diff:*), Bash(gh pr checks:*), Bash(gh run view:*)
 effort: high
-tags: [review, quality-gate, production-readiness, security, testing, audit]
 ---
 
 # Reviewer

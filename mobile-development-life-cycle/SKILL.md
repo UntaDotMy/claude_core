@@ -4,7 +4,6 @@ description: Mobile app development for Android and iOS. Covers lifecycle manage
 when_to_use: Mobile architecture, quality, and release.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(gradle:*), Bash(./gradlew:*), Bash(xcodebuild:*), Bash(pod:*), Bash(adb:*), Bash(flutter:*), Bash(npx react-native:*), Bash(claude-skills memory:*)
 effort: medium
-tags: [mobile, android, ios, flutter, react-native, app-store, offline-sync, battery]
 ---
 
 # Mobile Development Life Cycle

@@ -4,7 +4,6 @@ description: Expert in application security, penetration testing workflows, thre
 when_to_use: Security reviews, threat modeling, compliance, and remediation quality.
 allowed-tools: Read, Grep, Glob, Bash(git diff:*), Bash(git log:*), Bash(npm audit:*), Bash(yarn audit:*), Bash(pnpm audit:*), Bash(cargo audit:*), Bash(pip-audit:*), Bash(safety:*), Bash(semgrep:*), Bash(trivy:*), Bash(gitleaks:*), Bash(claude-skills memory:*)
 effort: high
-tags: [security, audit, compliance, soc2, gdpr, threat-modeling, vulnerability]
 ---
 
 # Security and Compliance Auditor

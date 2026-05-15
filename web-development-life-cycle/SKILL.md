@@ -4,7 +4,6 @@ description: Web development for websites and web applications. Covers frontend/
 when_to_use: Web architecture, quality, and production delivery.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(npx:*), Bash(node:*), Bash(vite:*), Bash(next:*), Bash(claude-skills memory:*)
 effort: medium
-tags: [web, frontend, backend, performance, seo, accessibility, browser-compat, deployment]
 ---
 
 # Web Development Life Cycle

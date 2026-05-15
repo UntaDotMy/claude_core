@@ -4,7 +4,6 @@ description: Produces human-style memory status reports from Claude Code memory 
 when_to_use: Human-style memory health and learning reports.
 allowed-tools: Read, Grep, Glob, Bash(claude-skills memory:*)
 effort: low
-tags: [memory, status-report, summarization, learning-recap]
 ---
 
 # Memory Status Reporter

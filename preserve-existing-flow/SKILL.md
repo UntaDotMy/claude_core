@@ -4,7 +4,6 @@ description: Use when modifying an existing or brownfield codebase where current
 when_to_use: Preserve existing flows before brownfield changes.
 allowed-tools: Read, Grep, Glob, Bash(claude-skills flow:*), Bash(claude-skills memory:*), Bash(git diff:*), Bash(git log:*), Bash(git show:*)
 effort: high
-tags: [brownfield, refactor, preservation, ownership, flow-tracing, pre-edit-gate]
 ---
 
 # Preserve Existing Flow
