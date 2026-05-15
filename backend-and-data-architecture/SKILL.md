@@ -4,7 +4,6 @@ description: Expert guidance on backend systems, microservices, API design, data
 when_to_use: Backend systems, API design, and data engineering.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(claude-skills memory:*), Bash(git diff:*), Bash(git status), Bash(git log:*), Bash(cargo:*), Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(go:*), Bash(python:*), Bash(uv:*), Bash(pytest:*)
 effort: medium
-tags: [backend, api, database, microservices, caching, event-driven, schema]
 ---
 
 ---

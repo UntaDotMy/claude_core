@@ -4,7 +4,6 @@ description: Expert Git workflow guidance for branching, commits, pull requests,
 when_to_use: Safe Git workflow and version control.
 allowed-tools: Read, Grep, Glob, Bash(git:*), Bash(gh:*), Bash(claude-skills git-workflow:*)
 effort: medium
-tags: [git, version-control, branching, pull-request, merge, conflict-resolution]
 ---
 
 ---

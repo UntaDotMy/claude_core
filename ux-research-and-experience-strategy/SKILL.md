@@ -4,7 +4,6 @@ description: UX research, user testing, journey mapping, and experience strategy
 when_to_use: UX research and evidence-based experience design.
 allowed-tools: Read, Grep, Glob, Bash(claude-skills design-intelligence:*), Bash(claude-skills memory:*)
 effort: medium
-tags: [ux, research, journey-mapping, usability, experience-strategy, user-testing]
 ---
 
 ---

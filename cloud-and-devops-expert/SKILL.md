@@ -4,7 +4,6 @@ description: Expert guidance on cloud infrastructure, DevOps practices, CI/CD pi
 when_to_use: Cloud infrastructure, CI/CD, and DevOps.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(terraform:*), Bash(kubectl:*), Bash(helm:*), Bash(docker:*), Bash(aws:*), Bash(gcloud:*), Bash(az:*), Bash(gh workflow:*), Bash(gh run:*), Bash(claude-skills memory:*)
 effort: medium
-tags: [cloud, devops, ci-cd, kubernetes, terraform, infrastructure, iac, deployment]
 ---
 
 ---

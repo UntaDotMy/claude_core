@@ -4,7 +4,6 @@ description: End-to-end software engineering guidance for planning, designing, b
 when_to_use: Software engineering lifecycle and delivery.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(claude-skills:*), Bash(git diff:*), Bash(git log:*), Bash(git status), Bash(cargo:*), Bash(npm:*), Bash(yarn:*), Bash(pnpm:*), Bash(go:*), Bash(python:*), Bash(uv:*)
 effort: high
-tags: [sdlc, architecture, planning, lifecycle, cross-domain, delivery]
 ---
 
 ---

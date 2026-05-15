@@ -4,7 +4,6 @@ description: Expert in Quality Assurance, Test-Driven Development (TDD), end-to-
 when_to_use: QA, automated testing, and release reliability.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash(pytest:*), Bash(cargo test:*), Bash(npm test:*), Bash(npm run test:*), Bash(yarn test:*), Bash(pnpm test:*), Bash(go test:*), Bash(jest:*), Bash(vitest:*), Bash(playwright:*), Bash(cypress:*), Bash(claude-skills memory:*)
 effort: medium
-tags: [qa, testing, tdd, e2e, automation, regression, playwright, cypress]
 ---
 
 ---
