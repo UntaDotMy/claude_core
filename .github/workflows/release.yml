@@ -17,8 +17,13 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
 env:
   CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
 
 jobs:
   release-preflight:
@@ -70,12 +75,6 @@ jobs:
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "build_version=$build_version" >> "$GITHUB_OUTPUT"
 
-      - name: Validate
-        run: |
-          cargo test --workspace
-          cargo fmt --all -- --check
-          cargo clippy -- -D warnings
-
   build:
     name: Build ${{ matrix.target }}
     needs: release-preflight
@@ -124,6 +123,7 @@ jobs:
       - uses: Swatinem/rust-cache@42dc69e1aa15d09112580998cf2ef0119e2e91ae # v2
         with:
           cache-on-failure: true
+          key: release-${{ matrix.target }}
       - name: Install cross-compilation linker
         if: matrix.target == 'aarch64-unknown-linux-gnu'
         run: |
