@@ -131,6 +131,26 @@ Use `--repo-root <path>` only when you intentionally run `claude-skills install`
 
 The Rust manager remembers the source checkout in install metadata, fast-forwards that checkout on `update`, rebuilds the native CLI when needed, delta-syncs changed files, removes stale managed files, and preserves unrelated Claude Code-home files. Shell and PowerShell wrapper launchers are no longer shipped.
 
+On Windows, install replaces the running `claude-skills.exe` synchronously via `MoveFileEx(MOVEFILE_REPLACE_EXISTING)` (the same trick rustup uses) instead of a detached `cmd /C copy`. Failures now surface as install errors instead of leaving a stale binary on disk. When the source and the deployed binary are byte-identical, the swap is skipped entirely so a no-op `update` does not touch the executable.
+
+### After Install
+
+Run these once after a fresh install or update:
+
+```bash
+~/.claude/claude-skills.exe verify     # confirms inventory + binary match the source
+~/.claude/claude-skills.exe doctor     # probes hooks end-to-end, reports any drift
+~/.claude/claude-skills.exe status     # version, repo SHA, install timestamp
+```
+
+Hooks are wired automatically by `install`. If you want to refresh `~/.claude/settings.json` without a full reinstall:
+
+```bash
+~/.claude/claude-skills.exe hook install
+```
+
+Set `CLAUDE_SKILLS_VERSION=vX.Y.Z` on the bootstrap installer to pin a specific release tag.
+
 ## Find Fast
 
 | Job | Commands |

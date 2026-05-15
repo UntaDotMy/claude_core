@@ -8,7 +8,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::io::Write;
 use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::process::Command;
 use std::thread;
 use std::time::Duration;
 
@@ -447,72 +447,73 @@ pub fn publish_native_executable(
         return Ok(false);
     }
     let target_path = installed_executable_path(claude_home);
+    if executables_are_identical(&source_path, &target_path) {
+        return Ok(false);
+    }
     atomic_copy_executable(&source_path, &target_path)?;
     Ok(true)
 }
 
+fn executables_are_identical(source: &Path, target: &Path) -> bool {
+    if !target.is_file() {
+        return false;
+    }
+    let source_meta = match fs::metadata(source) {
+        Ok(meta) => meta,
+        Err(_) => return false,
+    };
+    let target_meta = match fs::metadata(target) {
+        Ok(meta) => meta,
+        Err(_) => return false,
+    };
+    if source_meta.len() != target_meta.len() {
+        return false;
+    }
+    match (fs::read(source), fs::read(target)) {
+        (Ok(source_bytes), Ok(target_bytes)) => source_bytes == target_bytes,
+        _ => false,
+    }
+}
+
 fn atomic_copy_executable(source: &Path, target: &Path) -> Result<(), String> {
-    if cfg!(windows) {
-        publish_specific_executable(source, target)?;
-    } else {
-        let temp_path = target.with_extension("tmp");
-        publish_specific_executable(source, &temp_path)?;
-        fs::rename(&temp_path, target).map_err(|error| {
-            format!(
-                "rename {} to {}: {error}",
-                display_path(&temp_path),
-                display_path(target)
-            )
+    let temp_path = sibling_temp_path(target);
+    let _ = fs::remove_file(&temp_path);
+    fs::copy(source, &temp_path).map_err(|error| {
+        format!(
+            "copy {} to {}: {error}",
+            display_path(source),
+            display_path(&temp_path)
+        )
+    })?;
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut permissions = fs::metadata(&temp_path)
+            .map_err(|error| format!("read metadata for {}: {error}", display_path(&temp_path)))?
+            .permissions();
+        permissions.set_mode(0o755);
+        fs::set_permissions(&temp_path, permissions).map_err(|error| {
+            format!("set permissions for {}: {error}", display_path(&temp_path))
         })?;
     }
+    // On Windows, std::fs::rename calls MoveFileExW with MOVEFILE_REPLACE_EXISTING,
+    // which atomically replaces a running .exe (loader opens it FILE_SHARE_DELETE,
+    // so the directory entry is replaced while the running process keeps its handle).
+    fs::rename(&temp_path, target).map_err(|error| {
+        let _ = fs::remove_file(&temp_path);
+        format!(
+            "rename {} to {}: {error}",
+            display_path(&temp_path),
+            display_path(target)
+        )
+    })?;
     Ok(())
 }
 
-fn publish_specific_executable(source: &Path, target: &Path) -> Result<(), String> {
-    if cfg!(windows) && target.is_file() {
-        spawn_self_replace(source, target)?;
-    } else {
-        fs::copy(source, target).map_err(|error| {
-            format!(
-                "copy {} to {}: {error}",
-                display_path(source),
-                display_path(target)
-            )
-        })?;
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::PermissionsExt;
-            let mut permissions = fs::metadata(target)
-                .map_err(|error| format!("read metadata for {}: {error}", display_path(target)))?
-                .permissions();
-            permissions.set_mode(0o755);
-            fs::set_permissions(target, permissions).map_err(|error| {
-                format!("set permissions for {}: {error}", display_path(target))
-            })?;
-        }
-    }
-    Ok(())
-}
-
-fn spawn_self_replace(source: &Path, target: &Path) -> Result<(), String> {
-    let command_line = build_self_replace_command(source, target);
-    Command::new("cmd")
-        .args(["/C", &command_line])
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|error| format!("spawn self-replace: {error}"))?;
-    thread::sleep(Duration::from_millis(100));
-    Ok(())
-}
-
-fn build_self_replace_command(source: &Path, target: &Path) -> String {
-    format!(
-        "timeout /t 1 /nobreak >nul && copy /y \"{}\" \"{}\" >nul",
-        source.display(),
-        target.display()
-    )
+fn sibling_temp_path(target: &Path) -> PathBuf {
+    let mut name = target.file_name().map(|n| n.to_owned()).unwrap_or_default();
+    name.push(".new");
+    target.with_file_name(name)
 }
 
 fn executable_file_name() -> String {

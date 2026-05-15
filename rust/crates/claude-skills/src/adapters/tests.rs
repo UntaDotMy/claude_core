@@ -141,6 +141,7 @@ fn rerun_hint(program: &str, args: &[String], failure_lines: &[String]) -> Strin
 }
 
 #[cfg(test)]
+#[allow(clippy::module_inception)]
 mod tests {
     use super::TestAdapter;
     use crate::proxy::adapter::CommandAdapter;
