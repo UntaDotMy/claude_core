@@ -7,8 +7,6 @@ effort: medium
 tags: [backend, api, database, microservices, caching, event-driven, schema]
 ---
 
----
-
 # Backend and Data Architecture
 
 ## Purpose

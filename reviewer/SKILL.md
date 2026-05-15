@@ -7,8 +7,6 @@ effort: high
 tags: [review, quality-gate, production-readiness, security, testing, audit]
 ---
 
----
-
 # Reviewer
 
 ## Purpose

@@ -7,8 +7,6 @@ effort: medium
 tags: [qa, testing, tdd, e2e, automation, regression, playwright, cypress]
 ---
 
----
-
 # QA and Automation Engineer
 
 ## Purpose

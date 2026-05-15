@@ -7,8 +7,6 @@ effort: medium
 tags: [web, frontend, backend, performance, seo, accessibility, browser-compat, deployment]
 ---
 
----
-
 # Web Development Life Cycle
 
 ## Purpose

@@ -7,8 +7,6 @@ effort: low
 tags: [memory, status-report, summarization, learning-recap]
 ---
 
----
-
 # Memory Status Reporter
 
 ## Purpose

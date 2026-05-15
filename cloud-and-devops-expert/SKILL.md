@@ -7,8 +7,6 @@ effort: medium
 tags: [cloud, devops, ci-cd, kubernetes, terraform, infrastructure, iac, deployment]
 ---
 
----
-
 # Cloud and DevOps Expert
 
 ## Purpose
