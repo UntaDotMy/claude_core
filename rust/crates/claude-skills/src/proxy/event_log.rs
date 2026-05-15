@@ -1,8 +1,8 @@
 //! Purpose: Append token-saving measurement events for the gain/discover surfaces.
 //! Caller: proxy::run after raw output is saved and compact output is rendered.
 //! Dependencies: RunMeta, CompactResult, Claude home resolution, and JSONL file storage.
-//! Main Functions: record_compaction_event.
-//! Side Effects: Appends one JSON object per proxied command to the command compaction event log.
+//! Main Functions: record_compaction_event, rotate_event_log_if_needed.
+//! Side Effects: Appends one JSON object per proxied command to the command compaction event log, rotates when size exceeds 5MB.
 
 use crate::proxy::adapter::CompactResult;
 use crate::proxy::raw_store::RunMeta;
@@ -11,11 +11,43 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
 
+/// Maximum event log size in bytes before rotation trims old entries (5 MB).
+const MAX_EVENT_LOG_BYTES: u64 = 5 * 1024 * 1024;
+/// Number of most-recent lines to keep after rotation.
+const EVENT_LOG_KEEP_LINES: usize = 10_000;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct CompactionEvent {
     pub timestamp: String,
     #[serde(flatten)]
     pub meta: RunMeta,
+}
+
+/// Rotate the event log when it exceeds MAX_EVENT_LOG_BYTES by keeping only
+/// the most recent EVENT_LOG_KEEP_LINES lines. Silently skips on any I/O error
+/// so a rotation failure never blocks event recording.
+fn rotate_event_log_if_needed(event_path: &std::path::Path) {
+    let size = match fs::metadata(event_path) {
+        Ok(metadata) => metadata.len(),
+        Err(_) => return,
+    };
+    if size <= MAX_EVENT_LOG_BYTES {
+        return;
+    }
+    let content = match fs::read_to_string(event_path) {
+        Ok(text) => text,
+        Err(_) => return,
+    };
+    let kept_lines: Vec<&str> = content
+        .lines()
+        .rev()
+        .take(EVENT_LOG_KEEP_LINES)
+        .collect::<Vec<_>>()
+        .into_iter()
+        .rev()
+        .collect();
+    let trimmed = kept_lines.join("\n") + "\n";
+    let _ = fs::write(event_path, trimmed);
 }
 
 pub fn record_compaction_event(meta: &RunMeta, compact: &CompactResult) {
@@ -26,6 +58,7 @@ pub fn record_compaction_event(meta: &RunMeta, compact: &CompactResult) {
         return;
     }
     let event_path = claude_home.join(COMMAND_COMPACTION_EVENTS_FILE_NAME);
+    rotate_event_log_if_needed(&event_path);
     let payload = serde_json::json!({
         "timestamp": meta.started_at.to_string(),
         "command": &meta.command,
