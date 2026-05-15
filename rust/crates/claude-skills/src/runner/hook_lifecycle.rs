@@ -1302,6 +1302,50 @@ mod tests {
     }
 
     #[test]
+    fn stop_hook_uses_top_level_system_message_not_hook_specific_output() {
+        for subcommand in [
+            "stop",
+            "subagent-stop",
+            "session-start",
+            "session-end",
+            "notification",
+            "permission-request",
+        ] {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+
+            let code = run_hook_lifecycle(subcommand, &mut stdout, &mut stderr);
+
+            if stdout.is_empty() {
+                continue;
+            }
+
+            assert_eq!(
+                code,
+                0,
+                "stderr for {subcommand}: {}",
+                String::from_utf8_lossy(&stderr)
+            );
+
+            let output: JsonDocument = serde_json::from_slice(&stdout)
+                .unwrap_or_else(|error| panic!("invalid JSON for {subcommand}: {error}"));
+
+            assert!(
+                output.get("hookSpecificOutput").is_none(),
+                "{subcommand} must not emit hookSpecificOutput — Claude Code only allows it for PreToolUse/UserPromptSubmit/PostToolUse/PostToolBatch"
+            );
+
+            assert!(
+                output
+                    .get("systemMessage")
+                    .and_then(JsonDocument::as_str)
+                    .is_some(),
+                "{subcommand} must emit systemMessage as a top-level string"
+            );
+        }
+    }
+
+    #[test]
     fn memory_key_sanitization_matches_scope_command_shape() {
         let key = sanitize_memory_key(r#"C:\Users\riezh\OneDrive\Documents\test\claude_core"#);
 
