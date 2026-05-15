@@ -1303,7 +1303,14 @@ mod tests {
 
     #[test]
     fn stop_hook_uses_top_level_system_message_not_hook_specific_output() {
-        for subcommand in ["stop", "subagent-stop", "session-start", "session-end", "notification", "permission-request"] {
+        for subcommand in [
+            "stop",
+            "subagent-stop",
+            "session-start",
+            "session-end",
+            "notification",
+            "permission-request",
+        ] {
             let mut stdout = Vec::new();
             let mut stderr = Vec::new();
 
@@ -1313,7 +1320,12 @@ mod tests {
                 continue;
             }
 
-            assert_eq!(code, 0, "stderr for {subcommand}: {}", String::from_utf8_lossy(&stderr));
+            assert_eq!(
+                code,
+                0,
+                "stderr for {subcommand}: {}",
+                String::from_utf8_lossy(&stderr)
+            );
 
             let output: JsonDocument = serde_json::from_slice(&stdout)
                 .unwrap_or_else(|error| panic!("invalid JSON for {subcommand}: {error}"));
@@ -1324,7 +1336,10 @@ mod tests {
             );
 
             assert!(
-                output.get("systemMessage").and_then(JsonDocument::as_str).is_some(),
+                output
+                    .get("systemMessage")
+                    .and_then(JsonDocument::as_str)
+                    .is_some(),
                 "{subcommand} must emit systemMessage as a top-level string"
             );
         }
