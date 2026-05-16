@@ -164,3 +164,14 @@ When finished, state:
 - what remains unverified or blocked
 
 Never claim production-ready completion if ownership, recovery, or validation is incomplete.
+
+## Reference Files
+
+Deep guidance in `references/`. Load on demand:
+
+- `00-preserve-flow-knowledge-map.md` — Capability matrix and quick investigation sequence
+- `10-brownfield-investigation-checklist.md` — Working brief, seven-step flow trace, flow-check artifact discipline
+- `20-ownership-rules-and-no-overwrite.md` — Producer / transport / state / queue boundaries, rejected shortcuts, reference comparison rule
+- `30-safe-extension-and-implementation-gate.md` — Safe extension pattern, pre-edit gate questions, code change rules, batch validation discipline
+- `40-review-fail-conditions.md` — Fail conditions, severity ladder, final answer format, reviewer handoff
+- `99-source-anchors.md` — SKILL.md section map, related skills, tooling anchors
