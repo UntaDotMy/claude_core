@@ -10,6 +10,7 @@ pub mod classify;
 pub mod command_ast;
 pub mod event_log;
 pub mod filters;
+pub mod injection_guard;
 pub mod raw_store;
 pub mod registry;
 pub mod render;

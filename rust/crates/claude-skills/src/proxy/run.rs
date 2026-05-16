@@ -13,6 +13,7 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use crate::args::FlagSet;
 use crate::proxy::event_log::record_compaction_event;
+use crate::proxy::injection_guard::{neutralize_injection, InjectionFinding};
 use crate::proxy::raw_store::{RawRun, RawStore, RunMeta};
 use crate::proxy::token_meter::TokenMeter;
 use crate::runtime::{display_path, run_command, ProcessResult};
@@ -162,6 +163,8 @@ pub fn run_proxy(
 
             let compact_result =
                 adapter.compact(&raw_run.stdout, &raw_run.stderr, raw_run.exit_code, &meta);
+            let (compact_result, compact_findings) =
+                neutralize_compact_result(compact_result, &meta.raw_id);
             let rendered = cap_lines(
                 &crate::proxy::render::render_compact_result(&compact_result),
                 flag_set.string_value("max-lines").parse().unwrap_or(0),
@@ -174,15 +177,20 @@ pub fn run_proxy(
             meta.compacted = use_compact_output;
             meta.compact_path = meta.raw_path.join("compact.txt");
 
-            let agent_output = if use_compact_output {
-                rendered.clone()
+            let (agent_output, raw_findings) = if use_compact_output {
+                (rendered.clone(), Vec::new())
             } else {
-                format!(
+                let merged = format!(
                     "{}{}",
                     String::from_utf8_lossy(&result.stdout),
                     String::from_utf8_lossy(&result.stderr)
-                )
+                );
+                let (cleaned, findings) = neutralize_injection(&merged, &meta.raw_id);
+                (cleaned, findings)
             };
+            let mut all_findings = raw_findings;
+            all_findings.extend(compact_findings);
+            report_injection_findings(&all_findings, &meta.raw_id, standard_error);
             meta.compact_stdout_bytes = agent_output.len();
             meta.compact_stderr_bytes = 0;
             let measurement =
@@ -194,7 +202,7 @@ pub fn run_proxy(
             if !flag_set.bool_value("no-raw") {
                 let _ = store.save_compact(&meta, &agent_output);
             }
-            record_compaction_event(&meta, &compact_result);
+            record_compaction_event(&meta, &compact_result, &all_findings);
 
             if flag_set.bool_value("json") {
                 let json_result = serde_json::json!({
@@ -253,6 +261,48 @@ fn shell_command_parts(command: &str) -> (String, Vec<String>) {
             vec!["-lc".to_string(), command.to_string()],
         )
     }
+}
+
+fn neutralize_compact_result(
+    mut result: crate::proxy::adapter::CompactResult,
+    raw_id: &str,
+) -> (crate::proxy::adapter::CompactResult, Vec<InjectionFinding>) {
+    let mut findings = Vec::new();
+    let (clean_stdout, stdout_findings) = neutralize_injection(&result.stdout, raw_id);
+    let (clean_stderr, stderr_findings) = neutralize_injection(&result.stderr, raw_id);
+    findings.extend(stdout_findings);
+    findings.extend(stderr_findings);
+    result.stdout = clean_stdout;
+    result.stderr = clean_stderr;
+    if !findings.is_empty() {
+        result.warnings.push(format!(
+            "neutralized {} prompt-injection block(s)",
+            findings.len()
+        ));
+    }
+    (result, findings)
+}
+
+fn report_injection_findings(
+    findings: &[InjectionFinding],
+    raw_id: &str,
+    standard_error: &mut dyn Write,
+) {
+    if findings.is_empty() {
+        return;
+    }
+    let _ = writeln!(
+        standard_error,
+        "[claude-skills] neutralized {} prompt-injection block(s) in command output (raw_id={raw_id}):",
+        findings.len()
+    );
+    for finding in findings {
+        let _ = writeln!(standard_error, "  - {finding}");
+    }
+    let _ = writeln!(
+        standard_error,
+        "  Recover the original bytes with: claude-skills raw {raw_id}"
+    );
 }
 
 fn shell_join(arguments: &[String]) -> String {
