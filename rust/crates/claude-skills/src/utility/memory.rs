@@ -57,8 +57,14 @@ pub fn run_memory_command(
             standard_output,
             standard_error,
         ),
-        "completion-gate" | "agent-registry" | "research-cache" | "maintenance"
-        | "agent-packets" | "loop-guard" | "retrieve" | "index" | "entity" | "hook" => {
+        "completion-gate" => run_completion_gate_command(
+            command_group,
+            &arguments[1..],
+            standard_output,
+            standard_error,
+        ),
+        "agent-registry" | "research-cache" | "maintenance" | "agent-packets" | "loop-guard"
+        | "retrieve" | "index" | "entity" | "hook" => {
             let _ = writeln!(
                 standard_output,
                 "{command_group} {}: Rust native placeholder completed without Go fallback",
@@ -1049,6 +1055,189 @@ fn split_csv_lines(joined: &str) -> Vec<String> {
         .map(|line| line.trim().to_string())
         .filter(|line| !line.is_empty())
         .collect()
+}
+
+fn run_completion_gate_command(
+    command_group: &str,
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    if arguments.is_empty() || is_help_argument(&arguments[0]) {
+        let _ = writeln!(
+            standard_output,
+            "Usage: claude-skills {command_group} completion-gate check --id <entry-id> [--brief-id <id>] [--proof <text>] [--claude-home <path>] [--json]"
+        );
+        return if arguments.is_empty() { 1 } else { 0 };
+    }
+    match arguments[0].as_str() {
+        "check" => run_completion_gate_check(
+            command_group,
+            &arguments[1..],
+            standard_output,
+            standard_error,
+        ),
+        other => {
+            let _ = writeln!(
+                standard_error,
+                "Unknown {command_group} completion-gate action: {other} (expected check)"
+            );
+            1
+        }
+    }
+}
+
+fn run_completion_gate_check(
+    command_group: &str,
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("completion-gate check");
+    flag_set.string_flag("id", "");
+    flag_set.string_flag("brief-id", "");
+    flag_set.string_flag("proof", "");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let entry_id = flag_set.string_value("id").trim().to_string();
+    if entry_id.is_empty() {
+        let _ = writeln!(
+            standard_error,
+            "{command_group} completion-gate check: --id is required"
+        );
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} completion-gate check: {error}"
+            );
+            return 1;
+        }
+    };
+
+    let entry_probe: Result<Entry, String> = match read_entry(&claude_home, &entry_id) {
+        Ok(Some(entry)) => Ok(entry),
+        Ok(None) => Err(format!("no ledger entry with id {entry_id}")),
+        Err(error) => Err(error),
+    };
+    let entry_status = match &entry_probe {
+        Ok(entry) => format!("entry {} ({})", entry.id, entry.status),
+        Err(error) => error.clone(),
+    };
+
+    let open_probe: Result<String, String> = match &entry_probe {
+        Ok(entry) if entry.status == STATUS_OPEN => Ok(STATUS_OPEN.to_string()),
+        Ok(entry) => Err(format!(
+            "entry {} is {} (expected {STATUS_OPEN})",
+            entry.id, entry.status
+        )),
+        Err(_) => Err("entry probe failed; cannot evaluate open status".to_string()),
+    };
+    let open_status = match &open_probe {
+        Ok(detail) => detail.clone(),
+        Err(error) => error.clone(),
+    };
+
+    let brief_id_input = flag_set.string_value("brief-id").trim().to_string();
+    let brief_probe: Option<Result<String, String>> = if brief_id_input.is_empty() {
+        None
+    } else {
+        Some(match read_brief(&claude_home, &brief_id_input) {
+            Ok(Some(brief)) => Ok(format!("{} ({})", brief.id, brief.request)),
+            Ok(None) => Err(format!("no working brief with id {brief_id_input}")),
+            Err(error) => Err(error),
+        })
+    };
+    let brief_status = brief_probe.as_ref().map(|probe| match probe {
+        Ok(detail) => detail.clone(),
+        Err(error) => error.clone(),
+    });
+
+    let proof_input = flag_set.string_value("proof").trim().to_string();
+    let proof_probe: Option<Result<String, String>> = if proof_input.is_empty() {
+        if flag_set.string_value("proof").is_empty() {
+            None
+        } else {
+            Some(Err("proof argument is whitespace only".to_string()))
+        }
+    } else {
+        Some(Ok(proof_input.clone()))
+    };
+    let proof_status = proof_probe.as_ref().map(|probe| match probe {
+        Ok(detail) => detail.clone(),
+        Err(error) => error.clone(),
+    });
+
+    let all_ok = entry_probe.is_ok()
+        && open_probe.is_ok()
+        && brief_probe.as_ref().map(Result::is_ok).unwrap_or(true)
+        && proof_probe.as_ref().map(Result::is_ok).unwrap_or(true);
+
+    if flag_set.bool_value("json") {
+        let mut fields: Vec<(String, Value)> = vec![
+            ("ok".into(), Value::Bool(all_ok)),
+            ("id".into(), Value::String(entry_id.clone())),
+            ("entry".into(), probe_value(&entry_probe, &entry_status)),
+            ("open".into(), probe_value(&open_probe, &open_status)),
+        ];
+        if let (Some(probe), Some(status)) = (&brief_probe, &brief_status) {
+            fields.push(("workingBrief".into(), probe_value(probe, status)));
+        }
+        if let (Some(probe), Some(status)) = (&proof_probe, &proof_status) {
+            fields.push(("proof".into(), probe_value(probe, status)));
+        }
+        let exit = render_workflow_json(standard_output, standard_error, &Value::Object(fields));
+        return if all_ok { exit } else { 1 };
+    }
+
+    let _ = writeln!(
+        standard_output,
+        "{command_group} completion-gate check: id={entry_id} status={}",
+        if all_ok { "ok" } else { "fail" }
+    );
+    let _ = writeln!(
+        standard_output,
+        "  entry: {} -> {entry_status}",
+        probe_marker(&entry_probe)
+    );
+    let _ = writeln!(
+        standard_output,
+        "  open: {} -> {open_status}",
+        probe_marker(&open_probe)
+    );
+    if let (Some(probe), Some(status)) = (&brief_probe, &brief_status) {
+        let _ = writeln!(
+            standard_output,
+            "  working-brief: {} -> {status}",
+            probe_marker(probe)
+        );
+    }
+    if let (Some(probe), Some(status)) = (&proof_probe, &proof_status) {
+        let _ = writeln!(
+            standard_output,
+            "  proof: {} -> {status}",
+            probe_marker(probe)
+        );
+    }
+    if !all_ok {
+        let _ = writeln!(
+            standard_output,
+            "  hint: resolve failing probes before running claude-skills workflow finish --id {entry_id} --proof \"...\""
+        );
+        return 1;
+    }
+    let _ = writeln!(
+        standard_output,
+        "  hint: ready to close with claude-skills workflow finish --id {entry_id} --proof \"...\""
+    );
+    0
 }
 
 fn render_workflow_json(
@@ -2820,6 +3009,294 @@ mod tests {
         let stderr_text = String::from_utf8_lossy(&stderr).to_string();
         assert!(
             stderr_text.contains("Unknown memory working-brief action: bogus"),
+            "stderr: {stderr_text}"
+        );
+    }
+
+    #[test]
+    fn completion_gate_check_passes_for_open_entry_with_brief_and_proof() {
+        let temporary_directory = tempdir_under("claude-skills-cg-pass");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-pass", "wire pagination");
+        write_brief(
+            &claude_home,
+            &create_brief(
+                "wb-pass".into(),
+                "wire pagination on /users".into(),
+                vec!["no n+1".into()],
+                vec!["limit=20".into()],
+                Vec::new(),
+                format_timestamp_iso8601(0),
+            ),
+        )
+        .expect("seed brief");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--id".to_string(),
+                "wf-pass".to_string(),
+                "--brief-id".to_string(),
+                "wb-pass".to_string(),
+                "--proof".to_string(),
+                "ladder green".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("completion-gate check: id=wf-pass status=ok"),
+            "stdout: {output}"
+        );
+        assert!(output.contains("entry: ok"), "stdout: {output}");
+        assert!(output.contains("open: ok"), "stdout: {output}");
+        assert!(output.contains("working-brief: ok"), "stdout: {output}");
+        assert!(output.contains("proof: ok"), "stdout: {output}");
+        assert!(
+            output.contains("ready to close with claude-skills workflow finish"),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_check_fails_when_entry_missing() {
+        let temporary_directory = tempdir_under("claude-skills-cg-missing");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(claude_home.join("workflow")).expect("create ledger dir");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--id".to_string(),
+                "wf-missing".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("completion-gate check: id=wf-missing status=fail"),
+            "stdout: {output}"
+        );
+        assert!(
+            output.contains("entry: fail -> no ledger entry with id wf-missing"),
+            "stdout: {output}"
+        );
+        assert!(
+            output.contains("hint: resolve failing probes"),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_check_fails_when_entry_already_closed() {
+        let temporary_directory = tempdir_under("claude-skills-cg-closed");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        let open = seeded_open_entry(&claude_home, "wf-closed", "rotate secrets");
+        let closed = close_entry(open, format_timestamp_iso8601(1), "done".to_string());
+        write_entry(&claude_home, &closed).expect("seed closed entry");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--id".to_string(),
+                "wf-closed".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("entry: ok"), "stdout: {output}");
+        assert!(
+            output.contains("open: fail -> entry wf-closed is closed (expected open)"),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_check_fails_when_brief_missing() {
+        let temporary_directory = tempdir_under("claude-skills-cg-brief-missing");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-bm", "ship feature");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--id".to_string(),
+                "wf-bm".to_string(),
+                "--brief-id".to_string(),
+                "wb-nope".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("working-brief: fail -> no working brief with id wb-nope"),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_check_skips_optional_probes_when_flags_absent() {
+        let temporary_directory = tempdir_under("claude-skills-cg-skip");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-skip", "minimal smoke");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--id".to_string(),
+                "wf-skip".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("status=ok"), "stdout: {output}");
+        assert!(
+            !output.contains("working-brief:"),
+            "expected no working-brief probe in: {output}"
+        );
+        assert!(
+            !output.contains("proof:"),
+            "expected no proof probe in: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_check_requires_id() {
+        let temporary_directory = tempdir_under("claude-skills-cg-no-id");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("--id is required"),
+            "stderr: {stderr_text}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_check_json_emits_structured_payload() {
+        let temporary_directory = tempdir_under("claude-skills-cg-json");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-json", "structured payload");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "completion-gate".to_string(),
+                "check".to_string(),
+                "--id".to_string(),
+                "wf-json".to_string(),
+                "--proof".to_string(),
+                "ladder green".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+                "--json".to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("\"ok\": true"), "stdout: {output}");
+        assert!(output.contains("\"id\": \"wf-json\""), "stdout: {output}");
+        assert!(output.contains("\"entry\""), "stdout: {output}");
+        assert!(output.contains("\"open\""), "stdout: {output}");
+        assert!(output.contains("\"proof\""), "stdout: {output}");
+        assert!(
+            !output.contains("\"workingBrief\""),
+            "expected no workingBrief field when --brief-id absent: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn completion_gate_unknown_subcommand_returns_error() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &["completion-gate".to_string(), "bogus".to_string()],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("Unknown memory completion-gate action: bogus"),
             "stderr: {stderr_text}"
         );
     }
