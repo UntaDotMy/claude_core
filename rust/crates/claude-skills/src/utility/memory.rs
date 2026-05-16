@@ -98,8 +98,8 @@ pub fn run_workflow_command(
             run_workflow_cockpit(&arguments[1..], standard_output, standard_error)
         }
         "finish" => run_workflow_finish(&arguments[1..], standard_output, standard_error),
-        "resume" | "await" | "shutdown" | "guide" | "first-run" | "setup" | "guided-setup"
-        | "branch" => {
+        "resume" => run_workflow_resume(&arguments[1..], standard_output, standard_error),
+        "await" | "shutdown" | "guide" | "first-run" | "setup" | "guided-setup" | "branch" => {
             let _ = writeln!(
                 standard_output,
                 "workflow {}: stage=rust-native proof_state=ready go_fallback=false next_command=claude-skills validate --profile smoke",
@@ -377,6 +377,140 @@ fn run_workflow_finish(
         let _ = writeln!(standard_output, "  proof: {}", closed.proof);
     }
     let _ = writeln!(standard_output, "  ledger: {}", display_path(&path));
+    0
+}
+
+fn run_workflow_resume(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("workflow resume");
+    flag_set.string_flag("id", "");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow resume: {error}");
+            return 1;
+        }
+    };
+    let requested_id = flag_set.string_value("id").trim().to_string();
+    let json_output = flag_set.bool_value("json");
+    if !requested_id.is_empty() {
+        let entry = match read_entry(&claude_home, &requested_id) {
+            Ok(Some(entry)) => entry,
+            Ok(None) => {
+                let _ = writeln!(
+                    standard_error,
+                    "workflow resume: no ledger entry with id {requested_id}"
+                );
+                return 1;
+            }
+            Err(error) => {
+                let _ = writeln!(standard_error, "workflow resume: {error}");
+                return 1;
+            }
+        };
+        if entry.status == STATUS_CLOSED {
+            let _ = writeln!(
+                standard_error,
+                "workflow resume: entry {requested_id} is already closed (finished {})",
+                entry.finished_at
+            );
+            return 1;
+        }
+        if json_output {
+            let payload = Value::Object(vec![
+                (
+                    "ledgerDirectory".into(),
+                    Value::String(display_path(&claude_home.join("workflow"))),
+                ),
+                ("entry".into(), entry_to_value(&entry)),
+                (
+                    "nextCommand".into(),
+                    Value::String(format!(
+                        "claude-skills workflow finish --id {} --proof <evidence>",
+                        entry.id
+                    )),
+                ),
+            ]);
+            return render_workflow_json(standard_output, standard_error, &payload);
+        }
+        let _ = writeln!(standard_output, "workflow resume: id={}", entry.id);
+        let _ = writeln!(standard_output, "  request: {}", entry.request);
+        let _ = writeln!(standard_output, "  preset: {}", entry.preset);
+        let _ = writeln!(standard_output, "  started_at: {}", entry.started_at);
+        let _ = writeln!(
+            standard_output,
+            "  next: claude-skills workflow finish --id {} --proof <evidence>",
+            entry.id
+        );
+        return 0;
+    }
+    let entries = match list_entries(&claude_home) {
+        Ok(entries) => entries,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow resume: {error}");
+            return 1;
+        }
+    };
+    let open_entries: Vec<&Entry> = entries
+        .iter()
+        .filter(|entry| entry.status == STATUS_OPEN)
+        .collect();
+    if json_output {
+        let payload = Value::Object(vec![
+            (
+                "ledgerDirectory".into(),
+                Value::String(display_path(&claude_home.join("workflow"))),
+            ),
+            (
+                "openCount".into(),
+                Value::Number(open_entries.len().to_string()),
+            ),
+            (
+                "open".into(),
+                Value::Array(
+                    open_entries
+                        .iter()
+                        .map(|entry| entry_to_value(entry))
+                        .collect(),
+                ),
+            ),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(
+        standard_output,
+        "workflow resume: ledger={}",
+        display_path(&claude_home.join("workflow"))
+    );
+    if open_entries.is_empty() {
+        let _ = writeln!(
+            standard_output,
+            "  no open workflow entries (start one with: claude-skills workflow start --request \"...\")"
+        );
+        return 0;
+    }
+    let _ = writeln!(standard_output, "  open entries: {}", open_entries.len());
+    for entry in &open_entries {
+        let _ = writeln!(
+            standard_output,
+            "    {} [{}] {} (started {})",
+            entry.id, entry.preset, entry.request, entry.started_at
+        );
+        let _ = writeln!(
+            standard_output,
+            "      next: claude-skills workflow resume --id {}",
+            entry.id
+        );
+    }
     0
 }
 
@@ -1477,5 +1611,206 @@ mod tests {
         );
         assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
         assert!(String::from_utf8_lossy(&stdout).contains("specialist: reviewer"));
+    }
+
+    fn seeded_open_entry(claude_home: &std::path::Path, id: &str, request: &str) -> Entry {
+        let entry = create_entry(
+            id.to_string(),
+            request.to_string(),
+            "feature".to_string(),
+            format_timestamp_iso8601(0),
+        );
+        write_entry(claude_home, &entry).expect("seed open entry");
+        entry
+    }
+
+    #[test]
+    fn workflow_resume_lists_open_entries_when_no_id_supplied() {
+        let temporary_directory = tempdir_under("claude-skills-workflow-resume-list");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-aaaa", "ship pagination");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "resume".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("workflow resume: ledger="),
+            "stdout: {output}"
+        );
+        assert!(output.contains("wf-aaaa"), "stdout: {output}");
+        assert!(output.contains("ship pagination"), "stdout: {output}");
+        assert!(
+            output.contains("claude-skills workflow resume --id wf-aaaa"),
+            "expected resume hint in: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn workflow_resume_with_no_open_entries_emits_action_hint() {
+        let temporary_directory = tempdir_under("claude-skills-workflow-resume-empty");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(claude_home.join("workflow")).expect("create ledger dir");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "resume".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("no open workflow entries"),
+            "stdout: {output}"
+        );
+        assert!(
+            output.contains("claude-skills workflow start"),
+            "expected start hint in: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn workflow_resume_focuses_single_entry_when_id_supplied() {
+        let temporary_directory = tempdir_under("claude-skills-workflow-resume-id");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-bbbb", "investigate signup funnel");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "resume".to_string(),
+                "--id".to_string(),
+                "wf-bbbb".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("workflow resume: id=wf-bbbb"));
+        assert!(output.contains("investigate signup funnel"));
+        assert!(
+            output.contains("claude-skills workflow finish --id wf-bbbb --proof"),
+            "expected finish hint in: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn workflow_resume_unknown_id_returns_error() {
+        let temporary_directory = tempdir_under("claude-skills-workflow-resume-missing");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(claude_home.join("workflow")).expect("create ledger dir");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "resume".to_string(),
+                "--id".to_string(),
+                "wf-missing".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("no ledger entry with id wf-missing"),
+            "stderr: {stderr_text}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn workflow_resume_rejects_already_closed_entry() {
+        let temporary_directory = tempdir_under("claude-skills-workflow-resume-closed");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        let open = seeded_open_entry(&claude_home, "wf-cccc", "rotate auth secrets");
+        let closed = close_entry(
+            open,
+            format_timestamp_iso8601(1),
+            "ladder green".to_string(),
+        );
+        write_entry(&claude_home, &closed).expect("seed closed entry");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "resume".to_string(),
+                "--id".to_string(),
+                "wf-cccc".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("entry wf-cccc is already closed"),
+            "stderr: {stderr_text}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn workflow_resume_json_emits_structured_payload() {
+        let temporary_directory = tempdir_under("claude-skills-workflow-resume-json");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-dddd", "audit production readiness");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "resume".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+                "--json".to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("\"openCount\": 1"), "stdout: {output}");
+        assert!(output.contains("\"id\": \"wf-dddd\""), "stdout: {output}");
+        assert!(output.contains("\"ledgerDirectory\""), "stdout: {output}");
+
+        let _ = fs::remove_dir_all(&temporary_directory);
     }
 }
