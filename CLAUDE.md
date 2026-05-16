@@ -44,6 +44,20 @@ Each specialist contains three artifacts:
 
 13 specialists: `software-development-life-cycle`, `web-development-life-cycle`, `mobile-development-life-cycle`, `backend-and-data-architecture`, `cloud-and-devops-expert`, `qa-and-automation-engineer`, `security-and-compliance-auditor`, `git-expert`, `preserve-existing-flow`, `reviewer`, `ui-design-systems-and-responsive-interfaces`, `ux-research-and-experience-strategy`, `memory-status-reporter`.
 
+## Schema Compliance Notes
+
+**SKILL.md frontmatter** follows the official Claude Code skill spec. The fields used in this project are all documented Claude Code fields: `name` and `description` are required; `when_to_use`, `allowed-tools`, `effort`, and `paths` are official optional fields. Reference: https://code.claude.com/docs/en/skills.
+
+Other official optional fields not currently used here include `disable-model-invocation`, `user-invocable`, `argument-hint`, `arguments`, `model`, `context`, `agent`, `hooks`, and `shell`. Add them deliberately when a skill needs that capability.
+
+**Subagent frontmatter** (`.claude/agents/<name>.md`) follows the official spec: `name`, `description`, `tools` (comma-separated bare tool names), `model` (`opus`, `sonnet`, `haiku`, or `inherit`). The optional `color` field is supported. Note: scoped tool patterns like `Bash(git diff:*)` work in SKILL.md `allowed-tools` but not in subagent `tools` — subagents use bare tool names. Reference: https://code.claude.com/docs/en/sub-agents.
+
+**Hook events** (`.claude/hooks.json`) are wired through `claude-skills hook <event>` for every Claude Code lifecycle event the manager observes. The event list is kept in sync with the hooks reference at https://code.claude.com/docs/en/hooks (see `rust/crates/claude-skills/src/hooks/claude.rs::EVENTS`). When Anthropic adds or renames events, update both that constant and `.claude/hooks.json`. Events the binary supports but Claude Code does not yet emit are silently ignored at runtime.
+
+**Plugin manifest** (`.claude-plugin/plugin.json`) follows the official plugin schema with `skills`, `agents`, and `hooks` paths. Reference: https://code.claude.com/docs/en/plugins-reference.
+
+**Token-saving proxy**: command-output compaction lives in `rust/crates/claude-skills/src/proxy/`. The native `claude-skills run -- <command>`, `claude-skills rewrite`, and `claude-skills gain` surfaces own this work. When Claude Code introduces native compaction primitives, prefer them and keep this layer thin.
+
 ## Routing Rules
 
 1. Routing is driven by Claude Code's native skill matcher against the installed `~/.claude/skills/<name>/SKILL.md` files — each skill's frontmatter (`description`, `when_to_use`) is what triggers selection. The `UserPromptSubmit` hook is intentionally silent to preserve cache; the static operating contract is delivered once per session via `SessionStart` `additionalContext` and the project CLAUDE.md, then cached for the rest of the session.
