@@ -832,28 +832,34 @@ fn render_generated_message(
         let _ = writeln!(standard_error, "{}", parse_error.message);
         return 1;
     }
-    let diff_summary = if flag_set.bool_value("from-diff") {
+    let from_diff = flag_set.bool_value("from-diff");
+    let staged = if from_diff {
+        staged_files().unwrap_or_default()
+    } else {
+        Vec::new()
+    };
+    let diff_summary = if from_diff {
         git_diff_stat().unwrap_or_else(|| "No diff summary available.".to_string())
     } else {
         "No diff summary requested.".to_string()
     };
     if message_kind == "commit" {
-        // TODO: Generate commit message from diff instead of using placeholder
         let _ = writeln!(
             standard_output,
-            "chore: migrate claude-skills runtime to rust"
+            "{}",
+            generate_commit_subject(from_diff, &staged)
         );
+        let _ = writeln!(standard_output);
+        let _ = writeln!(standard_output, "{}", commit_body_from_staged(&staged));
         let _ = writeln!(standard_output);
         let _ = writeln!(standard_output, "{diff_summary}");
     } else {
-        // TODO: Generate PR body from diff instead of using placeholder
         let _ = writeln!(standard_output, "## Summary");
-        let _ = writeln!(
-            standard_output,
-            "- Migrates claude-skills runtime behavior to Rust-native command paths."
-        );
+        for bullet in pr_summary_bullets(&staged) {
+            let _ = writeln!(standard_output, "- {bullet}");
+        }
         let _ = writeln!(standard_output);
-        let _ = writeln!(standard_output, "## Validation");
+        let _ = writeln!(standard_output, "## Test plan");
         let test_result = flag_set.string_value("test-result");
         let _ = writeln!(
             standard_output,
@@ -866,6 +872,206 @@ fn render_generated_message(
         );
     }
     0
+}
+
+fn staged_files() -> Option<Vec<String>> {
+    let result = run_command(
+        "git",
+        &[
+            "diff".to_string(),
+            "--cached".to_string(),
+            "--name-only".to_string(),
+        ],
+        None,
+    )
+    .ok()?;
+    if result.code != 0 {
+        return None;
+    }
+    let text = String::from_utf8_lossy(&result.stdout);
+    let files: Vec<String> = text
+        .lines()
+        .map(str::trim)
+        .filter(|line| !line.is_empty())
+        .map(str::to_string)
+        .collect();
+    Some(files)
+}
+
+fn detect_change_type(paths: &[String]) -> &'static str {
+    if paths.is_empty() {
+        return "chore";
+    }
+    let all_match = |predicate: fn(&str) -> bool| paths.iter().all(|path| predicate(path));
+    let any_match = |predicate: fn(&str) -> bool| paths.iter().any(|path| predicate(path));
+
+    if all_match(is_docs_path) {
+        return "docs";
+    }
+    if all_match(is_ci_path) {
+        return "ci";
+    }
+    if all_match(is_test_path) {
+        return "test";
+    }
+    if any_match(is_test_path) && !any_match(is_source_path) {
+        return "test";
+    }
+    "chore"
+}
+
+fn is_docs_path(path: &str) -> bool {
+    path.ends_with(".md") || path.starts_with("docs/")
+}
+
+fn is_ci_path(path: &str) -> bool {
+    path.starts_with(".github/workflows/")
+        || path.starts_with(".github/actions/")
+        || path == ".gitlab-ci.yml"
+}
+
+fn is_test_path(path: &str) -> bool {
+    path.contains("/tests/")
+        || path.starts_with("tests/")
+        || path.ends_with("_test.rs")
+        || path.ends_with("_tests.rs")
+        || path.contains("/test_")
+        || path.contains("__tests__/")
+}
+
+fn is_source_path(path: &str) -> bool {
+    !is_docs_path(path) && !is_ci_path(path) && !is_test_path(path)
+}
+
+fn derive_scope(paths: &[String]) -> Option<String> {
+    if paths.is_empty() {
+        return None;
+    }
+    let segments: Vec<Vec<&str>> = paths
+        .iter()
+        .map(|path| path.split('/').collect::<Vec<&str>>())
+        .collect();
+
+    let head: Vec<&str> = segments[0].clone();
+    let mut prefix_len = head.len().saturating_sub(1);
+    for path in &segments[1..] {
+        let limit = std::cmp::min(prefix_len, path.len().saturating_sub(1));
+        let mut shared = 0;
+        while shared < limit && head[shared] == path[shared] {
+            shared += 1;
+        }
+        prefix_len = shared;
+        if prefix_len == 0 {
+            break;
+        }
+    }
+    if prefix_len == 0 {
+        return None;
+    }
+    let is_generic = |segment: &str| {
+        matches!(
+            segment,
+            "src" | "tests" | "test" | "lib" | "crates" | "packages"
+        )
+    };
+    let mut idx = prefix_len.saturating_sub(1);
+    while idx > 0 && is_generic(head[idx]) {
+        idx -= 1;
+    }
+    let leaf = head[idx];
+    let scope = leaf.trim_end_matches(".rs");
+    if scope.is_empty() || is_generic(scope) {
+        return None;
+    }
+    Some(scope.to_string())
+}
+
+fn generate_commit_subject(from_diff: bool, paths: &[String]) -> String {
+    if !from_diff {
+        return "chore: update".to_string();
+    }
+    if paths.is_empty() {
+        return "chore: no staged changes".to_string();
+    }
+    let change_type = detect_change_type(paths);
+    let summary = subject_summary(paths);
+    match derive_scope(paths) {
+        Some(scope) => format!("{change_type}({scope}): {summary}"),
+        None => format!("{change_type}: {summary}"),
+    }
+}
+
+fn subject_summary(paths: &[String]) -> String {
+    if paths.len() == 1 {
+        let leaf = paths[0].rsplit('/').next().unwrap_or(&paths[0]);
+        return format!("update {leaf}");
+    }
+    format!("update {} files", paths.len())
+}
+
+fn commit_body_from_staged(paths: &[String]) -> String {
+    if paths.is_empty() {
+        return "No staged changes.".to_string();
+    }
+    let mut lines = vec!["What Changed:".to_string()];
+    for path in paths.iter().take(20) {
+        lines.push(format!("- {path}"));
+    }
+    if paths.len() > 20 {
+        lines.push(format!("- ... and {} more files", paths.len() - 20));
+    }
+    lines.join("\n")
+}
+
+fn pr_summary_bullets(paths: &[String]) -> Vec<String> {
+    if paths.is_empty() {
+        return vec!["No staged changes detected.".to_string()];
+    }
+    let mut bullets = Vec::new();
+    let docs: Vec<&String> = paths.iter().filter(|p| is_docs_path(p)).collect();
+    let ci: Vec<&String> = paths.iter().filter(|p| is_ci_path(p)).collect();
+    let tests: Vec<&String> = paths.iter().filter(|p| is_test_path(p)).collect();
+    let source: Vec<&String> = paths.iter().filter(|p| is_source_path(p)).collect();
+    if !source.is_empty() {
+        bullets.push(format!(
+            "Source changes across {} file(s): {}",
+            source.len(),
+            preview_paths(&source, 3)
+        ));
+    }
+    if !tests.is_empty() {
+        bullets.push(format!(
+            "Test changes across {} file(s): {}",
+            tests.len(),
+            preview_paths(&tests, 3)
+        ));
+    }
+    if !docs.is_empty() {
+        bullets.push(format!(
+            "Docs changes across {} file(s): {}",
+            docs.len(),
+            preview_paths(&docs, 3)
+        ));
+    }
+    if !ci.is_empty() {
+        bullets.push(format!(
+            "CI changes across {} file(s): {}",
+            ci.len(),
+            preview_paths(&ci, 3)
+        ));
+    }
+    if bullets.is_empty() {
+        bullets.push(format!("Updated {} file(s)", paths.len()));
+    }
+    bullets
+}
+
+fn preview_paths(paths: &[&String], limit: usize) -> String {
+    let mut shown: Vec<String> = paths.iter().take(limit).map(|p| (*p).clone()).collect();
+    if paths.len() > limit {
+        shown.push(format!("(+{} more)", paths.len() - limit));
+    }
+    shown.join(", ")
 }
 
 fn lint_message(
@@ -1042,5 +1248,151 @@ mod tests {
         let (blocking, warnings) = tally_gate_results(&all_pass);
         assert_eq!(blocking, 0);
         assert_eq!(warnings, 0);
+    }
+
+    fn paths(items: &[&str]) -> Vec<String> {
+        items.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn detect_change_type_classifies_docs_only() {
+        let staged = paths(&["README.md", "docs/architecture.md"]);
+        assert_eq!(detect_change_type(&staged), "docs");
+    }
+
+    #[test]
+    fn detect_change_type_classifies_ci_only() {
+        let staged = paths(&[".github/workflows/release.yml"]);
+        assert_eq!(detect_change_type(&staged), "ci");
+    }
+
+    #[test]
+    fn detect_change_type_classifies_test_only() {
+        let staged = paths(&["tests/integration.rs", "src/foo_test.rs"]);
+        assert_eq!(detect_change_type(&staged), "test");
+    }
+
+    #[test]
+    fn detect_change_type_falls_back_to_chore_for_mixed_source() {
+        let staged = paths(&["src/lib.rs", "src/main.rs"]);
+        assert_eq!(detect_change_type(&staged), "chore");
+    }
+
+    #[test]
+    fn detect_change_type_empty_is_chore() {
+        assert_eq!(detect_change_type(&[]), "chore");
+    }
+
+    #[test]
+    fn derive_scope_returns_common_directory() {
+        let staged = paths(&[
+            "rust/crates/claude-skills/src/review.rs",
+            "rust/crates/claude-skills/src/runner/mod.rs",
+        ]);
+        assert_eq!(
+            derive_scope(&staged),
+            Some("claude-skills".to_string()),
+            "scope should be the deepest shared directory above the leaf files"
+        );
+    }
+
+    #[test]
+    fn derive_scope_returns_none_when_no_common_prefix() {
+        let staged = paths(&["src/lib.rs", "tests/it.rs"]);
+        assert_eq!(derive_scope(&staged), None);
+    }
+
+    #[test]
+    fn derive_scope_skips_bare_src_prefix() {
+        let staged = paths(&["src/foo.rs", "src/bar.rs"]);
+        assert_eq!(
+            derive_scope(&staged),
+            None,
+            "src/ alone is not a meaningful scope label"
+        );
+    }
+
+    #[test]
+    fn generate_commit_subject_without_diff_uses_placeholder() {
+        assert_eq!(generate_commit_subject(false, &[]), "chore: update");
+    }
+
+    #[test]
+    fn generate_commit_subject_with_diff_but_no_staged_signals_empty() {
+        assert_eq!(
+            generate_commit_subject(true, &[]),
+            "chore: no staged changes"
+        );
+    }
+
+    #[test]
+    fn generate_commit_subject_combines_type_scope_and_summary() {
+        let staged = paths(&[
+            "rust/crates/claude-skills/src/review.rs",
+            "rust/crates/claude-skills/src/lib.rs",
+        ]);
+        assert_eq!(
+            generate_commit_subject(true, &staged),
+            "chore(claude-skills): update 2 files"
+        );
+    }
+
+    #[test]
+    fn generate_commit_subject_single_file_uses_leaf_name() {
+        let staged = paths(&["docs/architecture.md"]);
+        let subject = generate_commit_subject(true, &staged);
+        assert!(
+            subject.starts_with("docs"),
+            "expected docs type, got {subject}"
+        );
+        assert!(
+            subject.ends_with("update architecture.md"),
+            "expected leaf summary, got {subject}"
+        );
+    }
+
+    #[test]
+    fn commit_body_lists_staged_paths_under_what_changed() {
+        let staged = paths(&["a.rs", "b.rs"]);
+        let body = commit_body_from_staged(&staged);
+        assert!(body.starts_with("What Changed:"));
+        assert!(body.contains("- a.rs"));
+        assert!(body.contains("- b.rs"));
+    }
+
+    #[test]
+    fn commit_body_truncates_after_twenty_paths() {
+        let many: Vec<String> = (0..25).map(|i| format!("file{i}.rs")).collect();
+        let body = commit_body_from_staged(&many);
+        assert!(body.contains("... and 5 more files"));
+    }
+
+    #[test]
+    fn commit_body_handles_empty() {
+        assert_eq!(commit_body_from_staged(&[]), "No staged changes.");
+    }
+
+    #[test]
+    fn pr_summary_bullets_groups_by_change_kind() {
+        let staged = paths(&[
+            "src/lib.rs",
+            "tests/it.rs",
+            "README.md",
+            ".github/workflows/ci.yml",
+        ]);
+        let bullets = pr_summary_bullets(&staged);
+        assert_eq!(bullets.len(), 4);
+        assert!(bullets[0].starts_with("Source changes"));
+        assert!(bullets.iter().any(|b| b.starts_with("Test changes")));
+        assert!(bullets.iter().any(|b| b.starts_with("Docs changes")));
+        assert!(bullets.iter().any(|b| b.starts_with("CI changes")));
+    }
+
+    #[test]
+    fn pr_summary_bullets_empty_returns_no_changes_message() {
+        assert_eq!(
+            pr_summary_bullets(&[]),
+            vec!["No staged changes detected.".to_string()]
+        );
     }
 }
