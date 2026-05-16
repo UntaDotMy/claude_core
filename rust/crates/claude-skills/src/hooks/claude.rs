@@ -10,19 +10,20 @@ pub const HOST: &str = "claude";
 pub const SETTINGS_FILE_NAME: &str = "settings.json";
 
 /// Claude Code's managed hook events — the lifecycle breadcrumbs the claude-skills
-/// manager subscribes to. This is a curated subset of the full event set documented
-/// at code.claude.com/docs/en/hooks; we wire up the ones that materially affect the
-/// manager's behavior (tool rewriting, permission tracking, compaction checkpoints,
+/// manager subscribes to. Covers all 9 no-matcher events from the official spec at
+/// code.claude.com/docs/en/hooks plus the matcher-supported events the manager
+/// materially handles (tool rewriting, permission tracking, compaction checkpoints,
 /// session and prompt lifecycle, task tracking, failure recording). Order is stable
 /// so rendered settings.json entries remain deterministic.
 ///
-/// Note: 9 events in the official spec have no matcher support
-/// (UserPromptSubmit, Stop, TaskCreated, TaskCompleted, PostToolBatch, TeammateIdle,
-/// WorktreeCreate, WorktreeRemove, CwdChanged). Do not add a matcher for those.
+/// No-matcher events (UserPromptSubmit, Stop, TaskCreated, TaskCompleted,
+/// PostToolBatch, TeammateIdle, WorktreeCreate, WorktreeRemove, CwdChanged) get
+/// an empty matcher string — the spec rejects matcher fields for these.
 pub const EVENTS: &[&str] = &[
     "PreToolUse",
     "PostToolUse",
     "PostToolUseFailure",
+    "PostToolBatch",
     "PermissionRequest",
     "Notification",
     "UserPromptSubmit",
@@ -30,6 +31,10 @@ pub const EVENTS: &[&str] = &[
     "SubagentStop",
     "TaskCreated",
     "TaskCompleted",
+    "TeammateIdle",
+    "WorktreeCreate",
+    "WorktreeRemove",
+    "CwdChanged",
     "PreCompact",
     "PostCompact",
     "SessionStart",
@@ -65,6 +70,7 @@ pub fn lifecycle_subcommand(event: &str) -> &'static str {
         "PreToolUse" => "pre-tool-use",
         "PostToolUse" => "post-tool-use",
         "PostToolUseFailure" => "post-tool-use-failure",
+        "PostToolBatch" => "post-tool-batch",
         "PermissionRequest" => "permission-request",
         "Notification" => "notification",
         "UserPromptSubmit" => "user-prompt-submit",
@@ -72,6 +78,10 @@ pub fn lifecycle_subcommand(event: &str) -> &'static str {
         "SubagentStop" => "subagent-stop",
         "TaskCreated" => "task-created",
         "TaskCompleted" => "task-completed",
+        "TeammateIdle" => "teammate-idle",
+        "WorktreeCreate" => "worktree-create",
+        "WorktreeRemove" => "worktree-remove",
+        "CwdChanged" => "cwd-changed",
         "PreCompact" => "pre-compact",
         "PostCompact" => "post-compact",
         "SessionStart" => "session-start",
@@ -86,6 +96,7 @@ pub fn status_message(event: &str) -> &'static str {
         "PreToolUse" => "Transparently rewriting noisy commands via claude-skills run",
         "PostToolUse" => "Recording post-tool lifecycle",
         "PostToolUseFailure" => "Recording tool failure for routing and recovery",
+        "PostToolBatch" => "Recording post-tool batch lifecycle",
         "PermissionRequest" => "Recording permission lifecycle",
         "Notification" => "Recording notification lifecycle",
         "UserPromptSubmit" => "Routing prompt to the right skill",
@@ -93,6 +104,10 @@ pub fn status_message(event: &str) -> &'static str {
         "SubagentStop" => "Closing subagent lifecycle",
         "TaskCreated" => "Recording task creation in workflow ledger",
         "TaskCompleted" => "Recording task completion in workflow ledger",
+        "TeammateIdle" => "Recording teammate idle lifecycle",
+        "WorktreeCreate" => "Recording worktree creation lifecycle",
+        "WorktreeRemove" => "Recording worktree removal lifecycle",
+        "CwdChanged" => "Recording working directory change",
         "PreCompact" => "Checkpointing before compaction",
         "PostCompact" => "Resuming after compaction",
         "SessionStart" => "Preparing native session state",
@@ -111,6 +126,7 @@ mod tests {
             "PreToolUse",
             "PostToolUse",
             "PostToolUseFailure",
+            "PostToolBatch",
             "PermissionRequest",
             "Notification",
             "UserPromptSubmit",
@@ -118,6 +134,10 @@ mod tests {
             "SubagentStop",
             "TaskCreated",
             "TaskCompleted",
+            "TeammateIdle",
+            "WorktreeCreate",
+            "WorktreeRemove",
+            "CwdChanged",
             "PreCompact",
             "PostCompact",
             "SessionStart",
@@ -126,6 +146,25 @@ mod tests {
             assert!(
                 EVENTS.contains(&expected),
                 "missing canonical event {expected}"
+            );
+        }
+    }
+
+    #[test]
+    fn no_matcher_events_have_lifecycle_subcommands() {
+        for event in [
+            "PostToolBatch",
+            "TeammateIdle",
+            "WorktreeCreate",
+            "WorktreeRemove",
+            "CwdChanged",
+        ] {
+            let sub = lifecycle_subcommand(event);
+            assert_ne!(sub, "unknown", "no subcommand mapping for {event}");
+            assert_ne!(
+                status_message(event),
+                "Native lifecycle hook",
+                "no status_message for {event}"
             );
         }
     }
