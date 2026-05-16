@@ -9,6 +9,7 @@ pub mod gain;
 pub mod memory;
 pub mod session;
 pub mod system_map;
+pub mod workflow_ledger;
 
 pub use code_search::{run_code_search_command, run_design_intelligence_command};
 pub use gain::{run_discover_command, run_gain_command};
