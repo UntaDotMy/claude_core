@@ -725,7 +725,134 @@ fn run_review_surface_command(
         let _ = writeln!(standard_error, "{}", parse_error.message);
         return 1;
     }
-    render_gate_result("pass", 0, flag_set.string_value("format"), standard_output)
+
+    // diff and init are informational surfaces — keep the existing pass behavior.
+    if surface_name == "diff" || surface_name == "init" {
+        return render_gate_result("pass", 0, flag_set.string_value("format"), standard_output);
+    }
+
+    let repository_root = match resolve_repository_root(flag_set.string_value("repo-root")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "{error}");
+            return 1;
+        }
+    };
+
+    let include_tests = surface_name == "pre-pr";
+    let gate_results = run_rust_surface_gates(&repository_root, include_tests);
+    let (blocking_findings, warnings) = tally_gate_results(&gate_results);
+
+    render_gate_results(
+        &gate_results,
+        blocking_findings,
+        warnings,
+        flag_set.string_value("format"),
+        standard_output,
+    );
+
+    if blocking_findings > 0 {
+        1
+    } else {
+        0
+    }
+}
+
+/// Run the developer-facing Rust gate set for review surfaces.
+/// pre-commit gets fmt + clippy (fast); pre-pr also runs the test suite.
+/// Skipped entirely when no Cargo.toml exists at the repository root.
+fn run_rust_surface_gates(repository_root: &Path, include_tests: bool) -> Vec<GateResult> {
+    let mut gate_results = Vec::new();
+    if !repository_root.join("Cargo.toml").exists() {
+        return gate_results;
+    }
+
+    let fmt_result = run_command(
+        "cargo",
+        &[
+            "fmt".to_string(),
+            "--all".to_string(),
+            "--".to_string(),
+            "--check".to_string(),
+        ],
+        Some(repository_root),
+    );
+    let fmt_passed = fmt_result.map(|r| r.code == 0).unwrap_or(false);
+    gate_results.push(GateResult {
+        name: "cargo_fmt".to_string(),
+        status: if fmt_passed {
+            GateStatus::Pass
+        } else {
+            GateStatus::Fail
+        },
+        blocking: true,
+        details: Some(
+            if fmt_passed {
+                "cargo fmt --check passed"
+            } else {
+                "cargo fmt --check found formatting issues"
+            }
+            .to_string(),
+        ),
+    });
+
+    let clippy_result = run_command(
+        "cargo",
+        &[
+            "clippy".to_string(),
+            "--all-targets".to_string(),
+            "--".to_string(),
+            "-D".to_string(),
+            "warnings".to_string(),
+        ],
+        Some(repository_root),
+    );
+    let clippy_passed = clippy_result.map(|r| r.code == 0).unwrap_or(false);
+    gate_results.push(GateResult {
+        name: "cargo_clippy".to_string(),
+        status: if clippy_passed {
+            GateStatus::Pass
+        } else {
+            GateStatus::Fail
+        },
+        blocking: true,
+        details: Some(
+            if clippy_passed {
+                "cargo clippy --all-targets -- -D warnings passed"
+            } else {
+                "cargo clippy --all-targets -- -D warnings found issues"
+            }
+            .to_string(),
+        ),
+    });
+
+    if include_tests {
+        let test_result = run_command(
+            "cargo",
+            &["test".to_string(), "--workspace".to_string()],
+            Some(repository_root),
+        );
+        let test_passed = test_result.map(|r| r.code == 0).unwrap_or(false);
+        gate_results.push(GateResult {
+            name: "cargo_test".to_string(),
+            status: if test_passed {
+                GateStatus::Pass
+            } else {
+                GateStatus::Fail
+            },
+            blocking: true,
+            details: Some(
+                if test_passed {
+                    "cargo test --workspace passed"
+                } else {
+                    "cargo test --workspace failed"
+                }
+                .to_string(),
+            ),
+        });
+    }
+
+    gate_results
 }
 
 fn run_review_policy_command(
@@ -1394,5 +1521,18 @@ mod tests {
             pr_summary_bullets(&[]),
             vec!["No staged changes detected.".to_string()]
         );
+    }
+
+    #[test]
+    fn rust_surface_gates_skip_when_no_cargo_toml() {
+        let temp = std::env::temp_dir().join("claude-skills-no-cargo-test");
+        std::fs::create_dir_all(&temp).unwrap();
+        let gates = run_rust_surface_gates(&temp, true);
+        assert!(
+            gates.is_empty(),
+            "non-Rust repos should skip cargo gates, got {gates:?}",
+            gates = gates.iter().map(|g| &g.name).collect::<Vec<_>>()
+        );
+        std::fs::remove_dir_all(&temp).unwrap();
     }
 }
