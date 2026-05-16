@@ -68,16 +68,257 @@ pub fn run_memory_command(
 pub fn run_orchestration_command(
     arguments: &[String],
     standard_output: &mut dyn Write,
-    _standard_error: &mut dyn Write,
+    standard_error: &mut dyn Write,
 ) -> u8 {
     if arguments.is_empty() || is_help_argument(&arguments[0]) {
-        let _ = writeln!(standard_output, "Usage: claude-skills orchestration [route-plan|task|start-run|finish-run|runtime-preflight] ...");
+        let _ = writeln!(
+            standard_output,
+            "Usage: claude-skills orchestration [resume-status|task|runtime-preflight|checkpoint] ..."
+        );
         return if arguments.is_empty() { 1 } else { 0 };
+    }
+    match arguments[0].as_str() {
+        "runtime-preflight" => {
+            run_orchestration_runtime_preflight(&arguments[1..], standard_output, standard_error)
+        }
+        "resume-status" => {
+            run_orchestration_resume_status(&arguments[1..], standard_output, standard_error)
+        }
+        "task" => run_orchestration_task(&arguments[1..], standard_output, standard_error),
+        "checkpoint" => {
+            run_orchestration_checkpoint(&arguments[1..], standard_output, standard_error)
+        }
+        other => {
+            let _ = writeln!(
+                standard_error,
+                "Unknown orchestration command: {other} (expected resume-status|task|runtime-preflight|checkpoint)"
+            );
+            1
+        }
+    }
+}
+
+fn run_orchestration_runtime_preflight(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("orchestration runtime-preflight");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let claude_home_probe = resolve_claude_home(flag_set.string_value("claude-home"));
+    let ledger_probe = claude_home_probe
+        .as_ref()
+        .map_err(|error| error.clone())
+        .and_then(|claude_home| {
+            let directory = claude_home.join("workflow");
+            fs::create_dir_all(&directory)
+                .map_err(|error| format!("create {}: {error}", display_path(&directory)))?;
+            Ok(directory)
+        });
+    let git_probe = match crate::runtime::run_command("git", &["--version".to_string()], None) {
+        Ok(result) if result.code == 0 => {
+            Ok(String::from_utf8_lossy(&result.stdout).trim().to_string())
+        }
+        Ok(result) => Err(format!("git --version exited with code {}", result.code)),
+        Err(error) => Err(error),
+    };
+    let claude_home_status = claude_home_probe
+        .as_ref()
+        .map(|path| display_path(path))
+        .unwrap_or_else(|error| error.clone());
+    let ledger_status = ledger_probe
+        .as_ref()
+        .map(|path| display_path(path))
+        .unwrap_or_else(|error| error.clone());
+    let git_status = match &git_probe {
+        Ok(version) => version.clone(),
+        Err(error) => error.clone(),
+    };
+    let all_ok = claude_home_probe.is_ok() && ledger_probe.is_ok() && git_probe.is_ok();
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            ("ok".into(), Value::Bool(all_ok)),
+            (
+                "claudeHome".into(),
+                probe_value(&claude_home_probe, &claude_home_status),
+            ),
+            (
+                "ledgerDirectory".into(),
+                probe_value(&ledger_probe, &ledger_status),
+            ),
+            ("git".into(), probe_value(&git_probe, &git_status)),
+        ]);
+        let exit = render_workflow_json(standard_output, standard_error, &payload);
+        return if all_ok { exit } else { 1 };
     }
     let _ = writeln!(
         standard_output,
-        "orchestration {}: rust runtime ready, go_fallback=false",
-        arguments[0]
+        "orchestration runtime-preflight: {}",
+        if all_ok { "ok" } else { "fail" }
+    );
+    let _ = writeln!(
+        standard_output,
+        "  claude_home: {} {claude_home_status}",
+        probe_marker(&claude_home_probe)
+    );
+    let _ = writeln!(
+        standard_output,
+        "  ledger:      {} {ledger_status}",
+        probe_marker(&ledger_probe)
+    );
+    let _ = writeln!(
+        standard_output,
+        "  git:         {} {git_status}",
+        probe_marker(&git_probe)
+    );
+    if all_ok {
+        0
+    } else {
+        1
+    }
+}
+
+fn probe_marker<T, E>(probe: &Result<T, E>) -> &'static str {
+    if probe.is_ok() {
+        "ok"
+    } else {
+        "fail"
+    }
+}
+
+fn probe_value<T, E>(probe: &Result<T, E>, status: &str) -> Value {
+    Value::Object(vec![
+        ("ok".into(), Value::Bool(probe.is_ok())),
+        ("detail".into(), Value::String(status.to_string())),
+    ])
+}
+
+fn run_orchestration_resume_status(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("orchestration resume-status");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "orchestration resume-status: {error}");
+            return 1;
+        }
+    };
+    let entries = match list_entries(&claude_home) {
+        Ok(entries) => entries,
+        Err(error) => {
+            let _ = writeln!(standard_error, "orchestration resume-status: {error}");
+            return 1;
+        }
+    };
+    let open_entries: Vec<&Entry> = entries
+        .iter()
+        .filter(|entry| entry.status == STATUS_OPEN)
+        .collect();
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            (
+                "ledgerDirectory".into(),
+                Value::String(display_path(&claude_home.join("workflow"))),
+            ),
+            (
+                "openCount".into(),
+                Value::Number(open_entries.len().to_string()),
+            ),
+            (
+                "open".into(),
+                Value::Array(
+                    open_entries
+                        .iter()
+                        .map(|entry| entry_to_value(entry))
+                        .collect(),
+                ),
+            ),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(
+        standard_output,
+        "orchestration resume-status: open={} ledger={}",
+        open_entries.len(),
+        display_path(&claude_home.join("workflow"))
+    );
+    if open_entries.is_empty() {
+        let _ = writeln!(
+            standard_output,
+            "  no open workflow entries (start one with: claude-skills workflow start --request \"...\")"
+        );
+        return 0;
+    }
+    for entry in &open_entries {
+        let _ = writeln!(
+            standard_output,
+            "  {} [{}] {} (started {})",
+            entry.id, entry.preset, entry.request, entry.started_at
+        );
+    }
+    0
+}
+
+fn run_orchestration_task(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    if arguments.is_empty() || is_help_argument(&arguments[0]) {
+        let _ = writeln!(
+            standard_output,
+            "Usage: claude-skills orchestration task [begin|progress|complete] ..."
+        );
+        return if arguments.is_empty() { 1 } else { 0 };
+    }
+    match arguments[0].as_str() {
+        "begin" | "progress" | "complete" => {
+            let _ = writeln!(
+                standard_output,
+                "orchestration task {}: rust-native placeholder (no ledger write yet)",
+                arguments[0]
+            );
+            0
+        }
+        other => {
+            let _ = writeln!(
+                standard_error,
+                "Unknown orchestration task action: {other} (expected begin|progress|complete)"
+            );
+            1
+        }
+    }
+}
+
+fn run_orchestration_checkpoint(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    _standard_error: &mut dyn Write,
+) -> u8 {
+    if !arguments.is_empty() && is_help_argument(&arguments[0]) {
+        let _ = writeln!(
+            standard_output,
+            "Usage: claude-skills orchestration checkpoint [--note <text>]"
+        );
+        return 0;
+    }
+    let _ = writeln!(
+        standard_output,
+        "orchestration checkpoint: rust-native placeholder (no ledger write yet)"
     );
     0
 }
@@ -1812,5 +2053,194 @@ mod tests {
         assert!(output.contains("\"ledgerDirectory\""), "stdout: {output}");
 
         let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn orchestration_unknown_subcommand_returns_error() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code =
+            run_orchestration_command(&["bogus-action".to_string()], &mut stdout, &mut stderr);
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("Unknown orchestration command: bogus-action"),
+            "stderr: {stderr_text}"
+        );
+    }
+
+    #[test]
+    fn orchestration_help_lists_documented_subcommands() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code =
+            run_orchestration_command(&["--help".to_string()], &mut stdout, &mut stderr);
+        assert_eq!(exit_code, 0);
+        let stdout_text = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            stdout_text.contains("resume-status"),
+            "stdout: {stdout_text}"
+        );
+        assert!(
+            stdout_text.contains("runtime-preflight"),
+            "stdout: {stdout_text}"
+        );
+        assert!(stdout_text.contains("checkpoint"), "stdout: {stdout_text}");
+        assert!(
+            !stdout_text.contains("route-plan"),
+            "stale subcommand still in help: {stdout_text}"
+        );
+    }
+
+    #[test]
+    fn orchestration_runtime_preflight_reports_probe_status() {
+        let temporary_directory = tempdir_under("claude-skills-orchestration-preflight");
+        let claude_home = temporary_directory.join("claude-home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_orchestration_command(
+            &[
+                "runtime-preflight".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        let stdout_text = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            stdout_text.contains("orchestration runtime-preflight:"),
+            "stdout: {stdout_text}"
+        );
+        assert!(
+            stdout_text.contains("claude_home:"),
+            "stdout: {stdout_text}"
+        );
+        assert!(stdout_text.contains("ledger:"), "stdout: {stdout_text}");
+        assert!(stdout_text.contains("git:"), "stdout: {stdout_text}");
+        assert!(
+            claude_home.join("workflow").is_dir(),
+            "ledger dir not created"
+        );
+        assert!(
+            exit_code == 0 || exit_code == 1,
+            "unexpected exit: {exit_code}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn orchestration_runtime_preflight_json_emits_structured_payload() {
+        let temporary_directory = tempdir_under("claude-skills-orchestration-preflight-json");
+        let claude_home = temporary_directory.join("claude-home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let _exit_code = run_orchestration_command(
+            &[
+                "runtime-preflight".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+                "--json".to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        let stdout_text = String::from_utf8_lossy(&stdout).to_string();
+        assert!(stdout_text.contains("\"ok\":"), "stdout: {stdout_text}");
+        assert!(
+            stdout_text.contains("\"claudeHome\""),
+            "stdout: {stdout_text}"
+        );
+        assert!(
+            stdout_text.contains("\"ledgerDirectory\""),
+            "stdout: {stdout_text}"
+        );
+        assert!(stdout_text.contains("\"git\""), "stdout: {stdout_text}");
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn orchestration_resume_status_lists_open_entries() {
+        let temporary_directory = tempdir_under("claude-skills-orchestration-resume-status");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+        seeded_open_entry(&claude_home, "wf-eeee", "wire orchestration dispatch");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_orchestration_command(
+            &[
+                "resume-status".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("orchestration resume-status: open=1"),
+            "stdout: {output}"
+        );
+        assert!(output.contains("wf-eeee"), "stdout: {output}");
+        assert!(
+            output.contains("wire orchestration dispatch"),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn orchestration_task_unknown_action_returns_error() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_orchestration_command(
+            &["task".to_string(), "begn".to_string()],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("Unknown orchestration task action: begn"),
+            "stderr: {stderr_text}"
+        );
+    }
+
+    #[test]
+    fn orchestration_task_known_action_succeeds() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_orchestration_command(
+            &["task".to_string(), "begin".to_string()],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0);
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("orchestration task begin:"),
+            "stdout: {output}"
+        );
+    }
+
+    #[test]
+    fn orchestration_checkpoint_returns_zero() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code =
+            run_orchestration_command(&["checkpoint".to_string()], &mut stdout, &mut stderr);
+        assert_eq!(exit_code, 0);
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("orchestration checkpoint:"),
+            "stdout: {output}"
+        );
     }
 }
