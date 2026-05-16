@@ -48,6 +48,18 @@
         ]
       }
     ],
+    "PostToolBatch": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook post-tool-batch",
+            "statusMessage": "Recording post-tool batch lifecycle"
+          }
+        ]
+      }
+    ],
     "TaskCreated": [
       {
         "matcher": "",
@@ -68,6 +80,54 @@
             "type": "command",
             "command": "claude-skills hook task-completed",
             "statusMessage": "Recording task completion in workflow ledger"
+          }
+        ]
+      }
+    ],
+    "TeammateIdle": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook teammate-idle",
+            "statusMessage": "Recording teammate idle lifecycle"
+          }
+        ]
+      }
+    ],
+    "WorktreeCreate": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook worktree-create",
+            "statusMessage": "Recording worktree creation lifecycle"
+          }
+        ]
+      }
+    ],
+    "WorktreeRemove": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook worktree-remove",
+            "statusMessage": "Recording worktree removal lifecycle"
+          }
+        ]
+      }
+    ],
+    "CwdChanged": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "claude-skills hook cwd-changed",
+            "statusMessage": "Recording working directory change"
           }
         ]
       }
