@@ -17,6 +17,9 @@ use crate::utility::workflow_ledger::{
     format_timestamp_iso8601, list_entries, read_entry, write_entry, Entry, STATUS_CLOSED,
     STATUS_OPEN,
 };
+use crate::utility::working_brief::{
+    brief_directory, brief_to_value, create_brief, list_briefs, read_brief, write_brief, Brief,
+};
 
 pub fn run_memory_command(
     command_group: &str,
@@ -48,9 +51,14 @@ pub fn run_memory_command(
             );
             0
         }
-        "working-brief" | "completion-gate" | "agent-registry" | "research-cache"
-        | "maintenance" | "agent-packets" | "loop-guard" | "retrieve" | "index" | "entity"
-        | "hook" => {
+        "working-brief" => run_working_brief_command(
+            command_group,
+            &arguments[1..],
+            standard_output,
+            standard_error,
+        ),
+        "completion-gate" | "agent-registry" | "research-cache" | "maintenance"
+        | "agent-packets" | "loop-guard" | "retrieve" | "index" | "entity" | "hook" => {
             let _ = writeln!(
                 standard_output,
                 "{command_group} {}: Rust native placeholder completed without Go fallback",
@@ -753,6 +761,294 @@ fn run_workflow_resume(
         );
     }
     0
+}
+
+fn run_working_brief_command(
+    command_group: &str,
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    if arguments.is_empty() || is_help_argument(&arguments[0]) {
+        let _ = writeln!(
+            standard_output,
+            "Usage: claude-skills {command_group} working-brief [write|show|list] ..."
+        );
+        return if arguments.is_empty() { 1 } else { 0 };
+    }
+    match arguments[0].as_str() {
+        "write" => run_working_brief_write(
+            command_group,
+            &arguments[1..],
+            standard_output,
+            standard_error,
+        ),
+        "show" => run_working_brief_show(
+            command_group,
+            &arguments[1..],
+            standard_output,
+            standard_error,
+        ),
+        "list" => run_working_brief_list(
+            command_group,
+            &arguments[1..],
+            standard_output,
+            standard_error,
+        ),
+        other => {
+            let _ = writeln!(
+                standard_error,
+                "Unknown {command_group} working-brief action: {other} (expected write|show|list)"
+            );
+            1
+        }
+    }
+}
+
+fn run_working_brief_write(
+    command_group: &str,
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("working-brief write");
+    flag_set.string_flag("id", "");
+    flag_set.string_flag("request", "");
+    flag_set.string_flag("constraints", "");
+    flag_set.string_flag("acceptance-criteria", "");
+    flag_set.string_flag("assumptions", "");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let request = flag_set.string_value("request").trim().to_string();
+    if request.is_empty() {
+        let _ = writeln!(
+            standard_error,
+            "{command_group} working-brief write: --request is required"
+        );
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief write: {error}"
+            );
+            return 1;
+        }
+    };
+    let now_millis = current_timestamp_millis();
+    let entry_id = flag_set.string_value("id").trim().to_string();
+    let entry_id = if entry_id.is_empty() {
+        format!("wb-{now_millis:x}")
+    } else {
+        entry_id
+    };
+    let brief = create_brief(
+        entry_id,
+        request,
+        split_csv_lines(flag_set.string_value("constraints")),
+        split_csv_lines(flag_set.string_value("acceptance-criteria")),
+        split_csv_lines(flag_set.string_value("assumptions")),
+        format_timestamp_iso8601(now_millis),
+    );
+    let path = match write_brief(&claude_home, &brief) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief write: {error}"
+            );
+            return 1;
+        }
+    };
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            ("written".into(), Value::Bool(true)),
+            ("path".into(), Value::String(display_path(&path))),
+            ("brief".into(), brief_to_value(&brief)),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(
+        standard_output,
+        "{command_group} working-brief write: id={}",
+        brief.id
+    );
+    let _ = writeln!(standard_output, "  request: {}", brief.request);
+    let _ = writeln!(
+        standard_output,
+        "  constraints: {} entries",
+        brief.constraints.len()
+    );
+    let _ = writeln!(
+        standard_output,
+        "  acceptance_criteria: {} entries",
+        brief.acceptance_criteria.len()
+    );
+    let _ = writeln!(
+        standard_output,
+        "  assumptions: {} entries",
+        brief.assumptions.len()
+    );
+    let _ = writeln!(standard_output, "  path: {}", display_path(&path));
+    0
+}
+
+fn run_working_brief_show(
+    command_group: &str,
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("working-brief show");
+    flag_set.string_flag("id", "");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let entry_id = flag_set.string_value("id").trim().to_string();
+    if entry_id.is_empty() {
+        let _ = writeln!(
+            standard_error,
+            "{command_group} working-brief show: --id is required"
+        );
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief show: {error}"
+            );
+            return 1;
+        }
+    };
+    let brief = match read_brief(&claude_home, &entry_id) {
+        Ok(Some(brief)) => brief,
+        Ok(None) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief show: no brief with id {entry_id}"
+            );
+            return 1;
+        }
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief show: {error}"
+            );
+            return 1;
+        }
+    };
+    if flag_set.bool_value("json") {
+        return render_workflow_json(standard_output, standard_error, &brief_to_value(&brief));
+    }
+    render_brief_text(standard_output, &brief);
+    0
+}
+
+fn run_working_brief_list(
+    command_group: &str,
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("working-brief list");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief list: {error}"
+            );
+            return 1;
+        }
+    };
+    let briefs = match list_briefs(&claude_home) {
+        Ok(briefs) => briefs,
+        Err(error) => {
+            let _ = writeln!(
+                standard_error,
+                "{command_group} working-brief list: {error}"
+            );
+            return 1;
+        }
+    };
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            (
+                "directory".into(),
+                Value::String(display_path(&brief_directory(&claude_home))),
+            ),
+            ("count".into(), Value::Number(briefs.len().to_string())),
+            (
+                "briefs".into(),
+                Value::Array(briefs.iter().map(brief_to_value).collect()),
+            ),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(
+        standard_output,
+        "{command_group} working-brief list: directory={} count={}",
+        display_path(&brief_directory(&claude_home)),
+        briefs.len()
+    );
+    if briefs.is_empty() {
+        let _ = writeln!(
+            standard_output,
+            "  no briefs (write one with: claude-skills {command_group} working-brief write --request \"...\")"
+        );
+        return 0;
+    }
+    for brief in &briefs {
+        let _ = writeln!(
+            standard_output,
+            "  {} {} (created {})",
+            brief.id, brief.request, brief.created_at
+        );
+    }
+    0
+}
+
+fn render_brief_text(standard_output: &mut dyn Write, brief: &Brief) {
+    let _ = writeln!(standard_output, "id: {}", brief.id);
+    let _ = writeln!(standard_output, "request: {}", brief.request);
+    let _ = writeln!(standard_output, "created_at: {}", brief.created_at);
+    let _ = writeln!(standard_output, "constraints:");
+    for line in &brief.constraints {
+        let _ = writeln!(standard_output, "  - {line}");
+    }
+    let _ = writeln!(standard_output, "acceptance_criteria:");
+    for line in &brief.acceptance_criteria {
+        let _ = writeln!(standard_output, "  - {line}");
+    }
+    let _ = writeln!(standard_output, "assumptions:");
+    for line in &brief.assumptions {
+        let _ = writeln!(standard_output, "  - {line}");
+    }
+}
+
+fn split_csv_lines(joined: &str) -> Vec<String> {
+    joined
+        .split(['|', '\n'])
+        .map(|line| line.trim().to_string())
+        .filter(|line| !line.is_empty())
+        .collect()
 }
 
 fn render_workflow_json(
@@ -2241,6 +2537,290 @@ mod tests {
         assert!(
             output.contains("orchestration checkpoint:"),
             "stdout: {output}"
+        );
+    }
+
+    #[test]
+    fn working_brief_write_round_trips_via_show() {
+        let temporary_directory = tempdir_under("claude-skills-wb-write-show");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "write".to_string(),
+                "--id".to_string(),
+                "wb-show-1".to_string(),
+                "--request".to_string(),
+                "ship pagination on /users".to_string(),
+                "--constraints".to_string(),
+                "must not break /users|no n+1 queries".to_string(),
+                "--acceptance-criteria".to_string(),
+                "limit=20 default|expose nextCursor".to_string(),
+                "--assumptions".to_string(),
+                "cursor encoding stays opaque".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let write_stdout = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            write_stdout.contains("memory working-brief write: id=wb-show-1"),
+            "stdout: {write_stdout}"
+        );
+        assert!(
+            write_stdout.contains("constraints: 2 entries"),
+            "stdout: {write_stdout}"
+        );
+
+        let mut show_stdout: Vec<u8> = Vec::new();
+        let mut show_stderr: Vec<u8> = Vec::new();
+        let show_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "show".to_string(),
+                "--id".to_string(),
+                "wb-show-1".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut show_stdout,
+            &mut show_stderr,
+        );
+        assert_eq!(
+            show_code,
+            0,
+            "stderr: {}",
+            String::from_utf8_lossy(&show_stderr)
+        );
+        let show_text = String::from_utf8_lossy(&show_stdout).to_string();
+        assert!(show_text.contains("id: wb-show-1"), "stdout: {show_text}");
+        assert!(
+            show_text.contains("request: ship pagination on /users"),
+            "stdout: {show_text}"
+        );
+        assert!(
+            show_text.contains("- must not break /users"),
+            "stdout: {show_text}"
+        );
+        assert!(
+            show_text.contains("- limit=20 default"),
+            "stdout: {show_text}"
+        );
+        assert!(
+            show_text.contains("- cursor encoding stays opaque"),
+            "stdout: {show_text}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn working_brief_write_requires_request() {
+        let temporary_directory = tempdir_under("claude-skills-wb-write-required");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "write".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("--request is required"),
+            "stderr: {stderr_text}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn working_brief_show_unknown_id_returns_error() {
+        let temporary_directory = tempdir_under("claude-skills-wb-show-missing");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "show".to_string(),
+                "--id".to_string(),
+                "wb-missing".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("no brief with id wb-missing"),
+            "stderr: {stderr_text}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn working_brief_list_empty_emits_action_hint() {
+        let temporary_directory = tempdir_under("claude-skills-wb-list-empty");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "list".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(
+            output.contains("memory working-brief list: directory="),
+            "stdout: {output}"
+        );
+        assert!(output.contains("count=0"), "stdout: {output}");
+        assert!(
+            output.contains("claude-skills memory working-brief write --request"),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn working_brief_list_renders_multiple_briefs_in_order() {
+        let temporary_directory = tempdir_under("claude-skills-wb-list-multi");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        for (id, request) in [("wb-alpha", "first request"), ("wb-beta", "second request")] {
+            let mut stdout: Vec<u8> = Vec::new();
+            let mut stderr: Vec<u8> = Vec::new();
+            let exit_code = run_memory_command(
+                "memory",
+                &[
+                    "working-brief".to_string(),
+                    "write".to_string(),
+                    "--id".to_string(),
+                    id.to_string(),
+                    "--request".to_string(),
+                    request.to_string(),
+                    "--claude-home".to_string(),
+                    claude_home.to_string_lossy().to_string(),
+                ],
+                &mut stdout,
+                &mut stderr,
+            );
+            assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        }
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "list".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("count=2"), "stdout: {output}");
+        let alpha_pos = output.find("wb-alpha").expect("wb-alpha listed");
+        let beta_pos = output.find("wb-beta").expect("wb-beta listed");
+        assert!(
+            alpha_pos < beta_pos,
+            "expected wb-alpha before wb-beta in: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn working_brief_write_json_emits_structured_payload() {
+        let temporary_directory = tempdir_under("claude-skills-wb-write-json");
+        let claude_home = temporary_directory.join("claude-home");
+        fs::create_dir_all(&claude_home).expect("create claude home");
+
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &[
+                "working-brief".to_string(),
+                "write".to_string(),
+                "--id".to_string(),
+                "wb-json".to_string(),
+                "--request".to_string(),
+                "json brief".to_string(),
+                "--claude-home".to_string(),
+                claude_home.to_string_lossy().to_string(),
+                "--json".to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("\"written\": true"), "stdout: {output}");
+        assert!(output.contains("\"id\": \"wb-json\""), "stdout: {output}");
+        assert!(
+            output.contains("\"request\": \"json brief\""),
+            "stdout: {output}"
+        );
+
+        let _ = fs::remove_dir_all(&temporary_directory);
+    }
+
+    #[test]
+    fn working_brief_unknown_subcommand_returns_error() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_memory_command(
+            "memory",
+            &["working-brief".to_string(), "bogus".to_string()],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 1);
+        let stderr_text = String::from_utf8_lossy(&stderr).to_string();
+        assert!(
+            stderr_text.contains("Unknown memory working-brief action: bogus"),
+            "stderr: {stderr_text}"
         );
     }
 }
