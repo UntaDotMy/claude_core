@@ -541,16 +541,12 @@ fn lifecycle_additional_context(subcommand: &str) -> String {
 }
 
 fn session_start_context() -> String {
-    let scope = memory_scope_summary();
-
-    format!(
-        "claude-skills automatic operating contract is active.\n\n\
-        Skills: route domain work through installed skills in ~/.claude/skills; for existing-source edits, apply preserve-existing-flow before patching and reviewer before closeout.\n\
-        Workflow: start substantial work with claude-skills workflow route/start, keep cockpit/proof state current, and finish only after validation evidence is present.\n\
-        Memory: read the workspace system map and relevant memory before recommendations; save durable user/project/reference/feedback facts when they will matter later; avoid saving ephemeral task state.\n\
-        Review: before final completion, run claude-skills review pre-pr and claude-skills review gates check when code or delivery artifacts changed.\n\
-        Commands: noisy Bash commands are automatically rewritten through claude-skills run --; use direct tools for file reads/searches when they are better.\n\n{scope}"
-    )
+    // The static operating contract lives in CLAUDE.md and AGENTS.md, both of
+    // which Claude Code reads into the cached prompt prefix. Repeating it here
+    // would double the token cost without adding context the model does not
+    // already see. SessionStart only contributes the runtime-resolved memory
+    // pointer, which CLAUDE.md cannot know in advance.
+    memory_scope_summary()
 }
 
 fn pre_compact_context() -> String {
@@ -1322,14 +1318,24 @@ mod tests {
     }
 
     #[test]
-    fn session_start_context_mentions_system_map() {
+    fn session_start_context_emits_only_runtime_memory_pointer() {
+        // The static operating contract lives in CLAUDE.md and AGENTS.md, both
+        // of which Claude Code reads into the cached prompt prefix. SessionStart
+        // must not duplicate that text — it only contributes the runtime-resolved
+        // workspace memory pointer (or its missing-pointer fallback), which
+        // CLAUDE.md cannot know in advance.
         let context = session_start_context();
-
-        assert!(context.contains("claude-skills automatic operating contract"));
 
         assert!(context.contains("Workspace memory system map"));
 
-        assert!(context.contains("review pre-pr"));
+        assert!(
+            !context.contains("claude-skills automatic operating contract"),
+            "SessionStart must not duplicate the operating contract that already lives in CLAUDE.md/AGENTS.md"
+        );
+        assert!(
+            !context.contains("review pre-pr"),
+            "SessionStart must not duplicate review-gate guidance that already lives in CLAUDE.md/AGENTS.md"
+        );
     }
 
     #[test]
