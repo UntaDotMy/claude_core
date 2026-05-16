@@ -1,8 +1,8 @@
 //! Purpose: Memory and scope command handlers for workspace-scoped memory management
 //! Caller: commands.rs via utility dispatcher
-//! Dependencies: std::fs, std::io, std::path, crate::args, crate::json, crate::runtime, crate::utility::system_map
-//! Main Functions: run_memory_command, run_scope_command, run_system_map_command
-//! Side Effects: Creates memory directories, reads/writes system map files
+//! Dependencies: std::fs, std::io, std::path, crate::args, crate::json, crate::runtime, crate::utility::system_map, crate::utility::workflow_ledger
+//! Main Functions: run_memory_command, run_scope_command, run_system_map_command, run_workflow_command
+//! Side Effects: Creates memory directories, reads/writes system map files, reads/writes workflow ledger files
 
 use std::fs;
 use std::io::Write;
@@ -12,6 +12,11 @@ use crate::args::FlagSet;
 use crate::json::{write_indented, Value};
 use crate::runtime::{display_path, resolve_claude_home, resolve_repository_root, write_text};
 use crate::utility::system_map::{render_system_map, sanitize_key};
+use crate::utility::workflow_ledger::{
+    allocate_unique_entry_id, close_entry, create_entry, current_timestamp_millis, entry_to_value,
+    format_timestamp_iso8601, list_entries, read_entry, write_entry, Entry, STATUS_CLOSED,
+    STATUS_OPEN,
+};
 
 pub fn run_memory_command(
     command_group: &str,
@@ -88,8 +93,13 @@ pub fn run_workflow_command(
     }
     match arguments[0].as_str() {
         "route" => run_workflow_route(&arguments[1..], standard_output, standard_error),
-        "start" | "resume" | "await" | "shutdown" | "finish" | "status" | "cockpit"
-        | "dashboard" | "watch" | "guide" | "first-run" | "setup" | "guided-setup" | "branch" => {
+        "start" => run_workflow_start(&arguments[1..], standard_output, standard_error),
+        "cockpit" | "status" | "dashboard" | "watch" => {
+            run_workflow_cockpit(&arguments[1..], standard_output, standard_error)
+        }
+        "finish" => run_workflow_finish(&arguments[1..], standard_output, standard_error),
+        "resume" | "await" | "shutdown" | "guide" | "first-run" | "setup" | "guided-setup"
+        | "branch" => {
             let _ = writeln!(
                 standard_output,
                 "workflow {}: stage=rust-native proof_state=ready go_fallback=false next_command=claude-skills validate --profile smoke",
@@ -102,6 +112,287 @@ pub fn run_workflow_command(
             1
         }
     }
+}
+
+fn run_workflow_start(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("workflow start");
+    flag_set.string_flag("request", "");
+    flag_set.string_flag("preset", "feature");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let mut request = flag_set.string_value("request").to_string();
+    if request.trim().is_empty() && !flag_set.positional.is_empty() {
+        request = flag_set.positional.join(" ");
+    }
+    if request.trim().is_empty() {
+        let _ = writeln!(
+            standard_error,
+            "workflow start: --request is required (e.g. --request \"ship pagination\")"
+        );
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow start: {error}");
+            return 1;
+        }
+    };
+    let now_millis = current_timestamp_millis();
+    let entry_id = match allocate_unique_entry_id(&claude_home, now_millis) {
+        Ok(id) => id,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow start: {error}");
+            return 1;
+        }
+    };
+    let entry = create_entry(
+        entry_id,
+        request.trim().to_string(),
+        flag_set.string_value("preset").trim().to_string(),
+        format_timestamp_iso8601(now_millis),
+    );
+    let path = match write_entry(&claude_home, &entry) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow start: {error}");
+            return 1;
+        }
+    };
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            ("created".into(), Value::Bool(true)),
+            ("path".into(), Value::String(display_path(&path))),
+            ("entry".into(), entry_to_value(&entry)),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(standard_output, "workflow start: id={}", entry.id);
+    let _ = writeln!(standard_output, "  request: {}", entry.request);
+    let _ = writeln!(standard_output, "  preset: {}", entry.preset);
+    let _ = writeln!(standard_output, "  started_at: {}", entry.started_at);
+    let _ = writeln!(standard_output, "  ledger: {}", display_path(&path));
+    0
+}
+
+fn run_workflow_cockpit(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("workflow cockpit");
+    flag_set.string_flag("claude-home", "");
+    flag_set.string_flag("closed-tail", "5");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow cockpit: {error}");
+            return 1;
+        }
+    };
+    let entries = match list_entries(&claude_home) {
+        Ok(entries) => entries,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow cockpit: {error}");
+            return 1;
+        }
+    };
+    let closed_tail: usize = flag_set
+        .string_value("closed-tail")
+        .parse()
+        .unwrap_or(5usize);
+    let open_entries: Vec<&Entry> = entries
+        .iter()
+        .filter(|entry| entry.status == STATUS_OPEN)
+        .collect();
+    let closed_entries: Vec<&Entry> = entries
+        .iter()
+        .filter(|entry| entry.status == STATUS_CLOSED)
+        .rev()
+        .take(closed_tail)
+        .collect();
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            (
+                "ledgerDirectory".into(),
+                Value::String(display_path(&claude_home.join("workflow"))),
+            ),
+            (
+                "openCount".into(),
+                Value::Number(open_entries.len().to_string()),
+            ),
+            (
+                "totalCount".into(),
+                Value::Number(entries.len().to_string()),
+            ),
+            (
+                "open".into(),
+                Value::Array(
+                    open_entries
+                        .iter()
+                        .map(|entry| entry_to_value(entry))
+                        .collect(),
+                ),
+            ),
+            (
+                "recentlyClosed".into(),
+                Value::Array(
+                    closed_entries
+                        .iter()
+                        .map(|entry| entry_to_value(entry))
+                        .collect(),
+                ),
+            ),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(
+        standard_output,
+        "workflow cockpit: ledger={}",
+        display_path(&claude_home.join("workflow"))
+    );
+    let _ = writeln!(
+        standard_output,
+        "  open: {} | total: {}",
+        open_entries.len(),
+        entries.len()
+    );
+    if open_entries.is_empty() {
+        let _ = writeln!(standard_output, "  no open workflow entries");
+    } else {
+        let _ = writeln!(standard_output, "  open entries:");
+        for entry in &open_entries {
+            let _ = writeln!(
+                standard_output,
+                "    {} [{}] {} (started {})",
+                entry.id, entry.preset, entry.request, entry.started_at
+            );
+        }
+    }
+    if !closed_entries.is_empty() {
+        let _ = writeln!(
+            standard_output,
+            "  recently closed (last {}):",
+            closed_entries.len()
+        );
+        for entry in &closed_entries {
+            let _ = writeln!(
+                standard_output,
+                "    {} [{}] {} (closed {})",
+                entry.id, entry.preset, entry.request, entry.finished_at
+            );
+        }
+    }
+    0
+}
+
+fn run_workflow_finish(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("workflow finish");
+    flag_set.string_flag("id", "");
+    flag_set.string_flag("proof", "");
+    flag_set.string_flag("claude-home", "");
+    flag_set.bool_flag("json", false);
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let entry_id = flag_set.string_value("id").trim().to_string();
+    if entry_id.is_empty() {
+        let _ = writeln!(
+            standard_error,
+            "workflow finish: --id is required (e.g. --id wf-1971c61bb00)"
+        );
+        return 1;
+    }
+    let claude_home = match resolve_claude_home(flag_set.string_value("claude-home")) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow finish: {error}");
+            return 1;
+        }
+    };
+    let existing = match read_entry(&claude_home, &entry_id) {
+        Ok(Some(entry)) => entry,
+        Ok(None) => {
+            let _ = writeln!(
+                standard_error,
+                "workflow finish: no ledger entry with id {entry_id}"
+            );
+            return 1;
+        }
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow finish: {error}");
+            return 1;
+        }
+    };
+    if existing.status == STATUS_CLOSED {
+        let _ = writeln!(
+            standard_error,
+            "workflow finish: entry {entry_id} is already closed (finished {})",
+            existing.finished_at
+        );
+        return 1;
+    }
+    let now_millis = current_timestamp_millis();
+    let closed = close_entry(
+        existing,
+        format_timestamp_iso8601(now_millis),
+        flag_set.string_value("proof").trim().to_string(),
+    );
+    let path = match write_entry(&claude_home, &closed) {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "workflow finish: {error}");
+            return 1;
+        }
+    };
+    if flag_set.bool_value("json") {
+        let payload = Value::Object(vec![
+            ("closed".into(), Value::Bool(true)),
+            ("path".into(), Value::String(display_path(&path))),
+            ("entry".into(), entry_to_value(&closed)),
+        ]);
+        return render_workflow_json(standard_output, standard_error, &payload);
+    }
+    let _ = writeln!(standard_output, "workflow finish: id={}", closed.id);
+    let _ = writeln!(standard_output, "  finished_at: {}", closed.finished_at);
+    if !closed.proof.is_empty() {
+        let _ = writeln!(standard_output, "  proof: {}", closed.proof);
+    }
+    let _ = writeln!(standard_output, "  ledger: {}", display_path(&path));
+    0
+}
+
+fn render_workflow_json(
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+    value: &Value,
+) -> u8 {
+    if let Err(write_error) = write_indented(standard_output, value) {
+        let _ = writeln!(
+            standard_error,
+            "Unable to render workflow JSON output: {write_error}"
+        );
+        return 1;
+    }
+    0
 }
 
 struct RoutingRule {
