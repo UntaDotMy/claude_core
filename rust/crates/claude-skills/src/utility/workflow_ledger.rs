@@ -214,7 +214,7 @@ fn unix_seconds_to_civil(unix_seconds: i64) -> (i32, u32, u32, u32, u32, u32) {
     (year, month, day, hour, minute, second)
 }
 
-fn parse_object_of_strings(text: &str) -> Result<Vec<(String, String)>, String> {
+pub(crate) fn parse_object_of_strings(text: &str) -> Result<Vec<(String, String)>, String> {
     let bytes = text.as_bytes();
     let mut index = 0;
     skip_whitespace(bytes, &mut index);
