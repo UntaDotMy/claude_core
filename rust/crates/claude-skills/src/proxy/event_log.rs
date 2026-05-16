@@ -5,6 +5,7 @@
 //! Side Effects: Appends one JSON object per proxied command to the command compaction event log, rotates when size exceeds 5MB.
 
 use crate::proxy::adapter::CompactResult;
+use crate::proxy::injection_guard::InjectionFinding;
 use crate::proxy::raw_store::RunMeta;
 use crate::runtime::{display_path, resolve_claude_home, COMMAND_COMPACTION_EVENTS_FILE_NAME};
 use serde::{Deserialize, Serialize};
@@ -50,7 +51,11 @@ fn rotate_event_log_if_needed(event_path: &std::path::Path) {
     let _ = fs::write(event_path, trimmed);
 }
 
-pub fn record_compaction_event(meta: &RunMeta, compact: &CompactResult) {
+pub fn record_compaction_event(
+    meta: &RunMeta,
+    compact: &CompactResult,
+    findings: &[InjectionFinding],
+) {
     let Ok(claude_home) = resolve_claude_home("") else {
         return;
     };
@@ -59,6 +64,7 @@ pub fn record_compaction_event(meta: &RunMeta, compact: &CompactResult) {
     }
     let event_path = claude_home.join(COMMAND_COMPACTION_EVENTS_FILE_NAME);
     rotate_event_log_if_needed(&event_path);
+    let injection_patterns: Vec<&str> = findings.iter().map(|f| f.pattern).collect();
     let payload = serde_json::json!({
         "timestamp": meta.started_at.to_string(),
         "command": &meta.command,
@@ -96,6 +102,9 @@ pub fn record_compaction_event(meta: &RunMeta, compact: &CompactResult) {
         "compactPath": display_path(&meta.compact_path),
         "agent": &meta.agent,
         "workspace": display_path(&meta.workspace),
+        "injection_neutralized": !findings.is_empty(),
+        "injection_findings": findings.len(),
+        "injection_patterns": injection_patterns,
     });
     let Ok(rendered) = serde_json::to_string(&payload) else {
         return;
