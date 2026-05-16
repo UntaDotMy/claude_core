@@ -59,8 +59,24 @@ pub fn run_hook_command(
 
         "pre-tool-use" => run_hook_pre_tool_use(standard_output, standard_error),
 
-        "post-tool-use" | "permission-request" | "notification" | "user-prompt-submit" | "stop"
-        | "subagent-stop" | "pre-compact" | "post-compact" | "session-start" | "session-end" => {
+        "post-tool-use"
+        | "post-tool-use-failure"
+        | "post-tool-batch"
+        | "permission-request"
+        | "notification"
+        | "user-prompt-submit"
+        | "stop"
+        | "subagent-stop"
+        | "task-created"
+        | "task-completed"
+        | "teammate-idle"
+        | "worktree-create"
+        | "worktree-remove"
+        | "cwd-changed"
+        | "pre-compact"
+        | "post-compact"
+        | "session-start"
+        | "session-end" => {
             run_hook_lifecycle(arguments[0].as_str(), standard_output, standard_error)
         }
 
@@ -465,6 +481,10 @@ fn hook_event_name_from_subcommand(subcommand: &str) -> &'static str {
     match subcommand {
         "post-tool-use" => "PostToolUse",
 
+        "post-tool-use-failure" => "PostToolUseFailure",
+
+        "post-tool-batch" => "PostToolBatch",
+
         "permission-request" => "PermissionRequest",
 
         "notification" => "Notification",
@@ -474,6 +494,18 @@ fn hook_event_name_from_subcommand(subcommand: &str) -> &'static str {
         "stop" => "Stop",
 
         "subagent-stop" => "SubagentStop",
+
+        "task-created" => "TaskCreated",
+
+        "task-completed" => "TaskCompleted",
+
+        "teammate-idle" => "TeammateIdle",
+
+        "worktree-create" => "WorktreeCreate",
+
+        "worktree-remove" => "WorktreeRemove",
+
+        "cwd-changed" => "CwdChanged",
 
         "pre-compact" => "PreCompact",
 
