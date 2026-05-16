@@ -87,9 +87,9 @@ pub fn run_workflow_command(
         return if arguments.is_empty() { 1 } else { 0 };
     }
     match arguments[0].as_str() {
+        "route" => run_workflow_route(&arguments[1..], standard_output, standard_error),
         "start" | "resume" | "await" | "shutdown" | "finish" | "status" | "cockpit"
-        | "dashboard" | "watch" | "route" | "guide" | "first-run" | "setup" | "guided-setup"
-        | "branch" => {
+        | "dashboard" | "watch" | "guide" | "first-run" | "setup" | "guided-setup" | "branch" => {
             let _ = writeln!(
                 standard_output,
                 "workflow {}: stage=rust-native proof_state=ready go_fallback=false next_command=claude-skills validate --profile smoke",
@@ -102,6 +102,286 @@ pub fn run_workflow_command(
             1
         }
     }
+}
+
+struct RoutingRule {
+    keywords: &'static [&'static str],
+    specialist: &'static str,
+    reason: &'static str,
+}
+
+const DEFAULT_ROUTE: RoutingRule = RoutingRule {
+    keywords: &[],
+    specialist: "software-development-life-cycle",
+    reason: "default lane for cross-domain coordination and sequencing",
+};
+
+const ROUTING_RULES: &[RoutingRule] = &[
+    RoutingRule {
+        keywords: &[
+            "audit",
+            "review",
+            "reviewer",
+            "production-ready",
+            "production ready",
+            "quality gate",
+            "release risk",
+            "gap analysis",
+            "release readiness",
+        ],
+        specialist: "reviewer",
+        reason: "production readiness and final quality gate",
+    },
+    RoutingRule {
+        keywords: &[
+            "preserve existing",
+            "preserve-existing-flow",
+            "brownfield",
+            "existing flow",
+            "owner trace",
+            "source of truth",
+        ],
+        specialist: "preserve-existing-flow",
+        reason: "brownfield ownership tracing before behavior change",
+    },
+    RoutingRule {
+        keywords: &[
+            "git",
+            "branch",
+            "rebase",
+            "merge conflict",
+            "force push",
+            "worktree",
+            "pull request",
+            "gh pr",
+            "github pr",
+            "pr body",
+            "commit message",
+        ],
+        specialist: "git-expert",
+        reason: "git workflow, PR, or branching operations",
+    },
+    RoutingRule {
+        keywords: &[
+            "security",
+            "vulnerability",
+            "threat model",
+            "threat",
+            "compliance",
+            "soc2",
+            "gdpr",
+            "owasp",
+            "secret",
+            "auth",
+            "authentication",
+            "authorization",
+            "rbac",
+        ],
+        specialist: "security-and-compliance-auditor",
+        reason: "security, threat modeling, or compliance review",
+    },
+    RoutingRule {
+        keywords: &[
+            "test",
+            "tests",
+            "tdd",
+            "playwright",
+            "cypress",
+            "e2e",
+            "regression",
+            "coverage",
+            "fixture",
+            "qa",
+        ],
+        specialist: "qa-and-automation-engineer",
+        reason: "test strategy, automation, or release ladder validation",
+    },
+    RoutingRule {
+        keywords: &[
+            "deploy",
+            "deployment",
+            "ci/cd",
+            "pipeline",
+            "kubernetes",
+            "k8s",
+            "terraform",
+            "pulumi",
+            "infrastructure",
+            "cloud",
+            "aws",
+            "gcp",
+            "azure",
+            "docker",
+            "helm",
+            "rollout",
+            "rollback",
+        ],
+        specialist: "cloud-and-devops-expert",
+        reason: "infrastructure, CI/CD, or deployment ownership",
+    },
+    RoutingRule {
+        keywords: &[
+            "api",
+            "microservice",
+            "microservices",
+            "database",
+            "schema",
+            "queue",
+            "kafka",
+            "postgres",
+            "postgresql",
+            "mysql",
+            "mongodb",
+            "redis",
+            "graphql",
+            "rest endpoint",
+        ],
+        specialist: "backend-and-data-architecture",
+        reason: "backend service, API, or data architecture",
+    },
+    RoutingRule {
+        keywords: &[
+            "mobile",
+            "ios",
+            "android",
+            "swift",
+            "kotlin",
+            "react native",
+            "flutter",
+            "app store",
+        ],
+        specialist: "mobile-development-life-cycle",
+        reason: "mobile platform development",
+    },
+    RoutingRule {
+        keywords: &[
+            "frontend", "browser", "react", "vue", "svelte", "next.js", "nextjs", "html", "css",
+            "spa", "webpage", "website", "web app",
+        ],
+        specialist: "web-development-life-cycle",
+        reason: "web application development",
+    },
+    RoutingRule {
+        keywords: &[
+            "ux",
+            "user research",
+            "journey",
+            "funnel",
+            "usability",
+            "user experience",
+            "user testing",
+        ],
+        specialist: "ux-research-and-experience-strategy",
+        reason: "user experience strategy and research",
+    },
+    RoutingRule {
+        keywords: &[
+            "ui",
+            "design system",
+            "design tokens",
+            "responsive",
+            "accessibility",
+            "wcag",
+            "layout",
+            "component library",
+        ],
+        specialist: "ui-design-systems-and-responsive-interfaces",
+        reason: "UI design system or responsive interface",
+    },
+    RoutingRule {
+        keywords: &[
+            "memory health",
+            "memory status",
+            "learning recap",
+            "what did i learn",
+            "what did you learn",
+            "memory growth",
+        ],
+        specialist: "memory-status-reporter",
+        reason: "memory health, learning, and mistake reporting",
+    },
+];
+
+fn run_workflow_route(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("workflow route");
+    flag_set.string_flag("request", "");
+    flag_set.string_flag("format", "text");
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+    let mut request = flag_set.string_value("request").to_string();
+    if request.is_empty() && !flag_set.positional.is_empty() {
+        request = flag_set.positional.join(" ");
+    }
+    if request.trim().is_empty() {
+        let _ = writeln!(
+            standard_error,
+            "workflow route: --request is required (e.g. --request \"audit the release pipeline\")"
+        );
+        return 1;
+    }
+    let matched_rule = match_routing_rule(&request);
+    let format = flag_set.string_value("format");
+    if format == "json" {
+        let payload = Value::Object(vec![
+            ("request".into(), Value::String(request.clone())),
+            (
+                "specialist".into(),
+                Value::String(matched_rule.specialist.into()),
+            ),
+            ("reason".into(), Value::String(matched_rule.reason.into())),
+            (
+                "matchedKeyword".into(),
+                Value::String(first_matching_keyword(&request, matched_rule).into()),
+            ),
+        ]);
+        return write_indented(standard_output, &payload).map_or(1, |_| 0);
+    }
+    let _ = writeln!(standard_output, "specialist: {}", matched_rule.specialist);
+    let _ = writeln!(standard_output, "reason: {}", matched_rule.reason);
+    let matched_keyword = first_matching_keyword(&request, matched_rule);
+    if !matched_keyword.is_empty() {
+        let _ = writeln!(standard_output, "matched_keyword: {matched_keyword}");
+    }
+    0
+}
+
+fn match_routing_rule(request: &str) -> &'static RoutingRule {
+    let lowercased = request.to_lowercase();
+    for rule in ROUTING_RULES {
+        for keyword in rule.keywords {
+            if request_contains_keyword(&lowercased, keyword) {
+                return rule;
+            }
+        }
+    }
+    &DEFAULT_ROUTE
+}
+
+fn first_matching_keyword(request: &str, rule: &RoutingRule) -> &'static str {
+    let lowercased = request.to_lowercase();
+    for keyword in rule.keywords {
+        if request_contains_keyword(&lowercased, keyword) {
+            return keyword;
+        }
+    }
+    ""
+}
+
+fn request_contains_keyword(request_lowercased: &str, keyword: &str) -> bool {
+    if keyword.contains(' ') {
+        return request_lowercased.contains(keyword);
+    }
+    request_lowercased
+        .split(|character: char| {
+            !character.is_alphanumeric() && character != '-' && character != '_'
+        })
+        .any(|token| token == keyword)
 }
 
 pub fn run_bench_command(
@@ -733,5 +1013,178 @@ mod tests {
         let candidate = std::env::temp_dir().join(format!("{label}-{unique_suffix}"));
         fs::create_dir_all(&candidate).expect("create tempdir");
         candidate
+    }
+
+    fn route(request: &str) -> (u8, String, String) {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "route".to_string(),
+                "--request".to_string(),
+                request.to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        (
+            exit_code,
+            String::from_utf8_lossy(&stdout).to_string(),
+            String::from_utf8_lossy(&stderr).to_string(),
+        )
+    }
+
+    #[test]
+    fn route_audit_request_targets_reviewer() {
+        let (exit_code, stdout, stderr) =
+            route("audit the release pipeline for production readiness");
+        assert_eq!(exit_code, 0, "stderr: {stderr}");
+        assert!(stdout.contains("specialist: reviewer"), "stdout: {stdout}");
+    }
+
+    #[test]
+    fn route_brownfield_edit_targets_preserve_existing_flow() {
+        let (exit_code, stdout, _) = route("trace the existing flow before editing");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: preserve-existing-flow"));
+    }
+
+    #[test]
+    fn route_pr_workflow_targets_git_expert() {
+        let (exit_code, stdout, _) = route("open a pull request and rebase the branch");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: git-expert"));
+    }
+
+    #[test]
+    fn route_threat_model_targets_security_auditor() {
+        let (exit_code, stdout, _) = route("threat model the new authentication endpoint");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: security-and-compliance-auditor"));
+    }
+
+    #[test]
+    fn route_test_strategy_targets_qa() {
+        let (exit_code, stdout, _) = route("design a playwright e2e test strategy");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: qa-and-automation-engineer"));
+    }
+
+    #[test]
+    fn route_kubernetes_targets_devops() {
+        let (exit_code, stdout, _) = route("update the kubernetes deployment and rollout plan");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: cloud-and-devops-expert"));
+    }
+
+    #[test]
+    fn route_database_schema_targets_backend() {
+        let (exit_code, stdout, _) = route("design a postgres schema for the new microservice");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: backend-and-data-architecture"));
+    }
+
+    #[test]
+    fn route_ios_targets_mobile() {
+        let (exit_code, stdout, _) = route("fix the swift crash on ios startup");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: mobile-development-life-cycle"));
+    }
+
+    #[test]
+    fn route_react_targets_web() {
+        let (exit_code, stdout, _) = route("refactor the react component on the dashboard webpage");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: web-development-life-cycle"));
+    }
+
+    #[test]
+    fn route_journey_friction_targets_ux() {
+        let (exit_code, stdout, _) =
+            route("investigate the signup funnel drop-off with user research");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: ux-research-and-experience-strategy"));
+    }
+
+    #[test]
+    fn route_design_system_targets_ui() {
+        let (exit_code, stdout, _) =
+            route("align the design system tokens for the responsive layout");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: ui-design-systems-and-responsive-interfaces"));
+    }
+
+    #[test]
+    fn route_memory_health_targets_memory_status_reporter() {
+        let (exit_code, stdout, _) = route("show memory health and what did you learn today");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: memory-status-reporter"));
+    }
+
+    #[test]
+    fn route_unknown_request_falls_back_to_sdlc_default() {
+        let (exit_code, stdout, _) = route("plan the next quarter roadmap");
+        assert_eq!(exit_code, 0);
+        assert!(stdout.contains("specialist: software-development-life-cycle"));
+        assert!(stdout.contains("default lane"));
+    }
+
+    #[test]
+    fn route_single_token_uses_word_boundary_matching() {
+        let (exit_code, stdout, _) = route("redesign the kiosk display");
+        assert_eq!(exit_code, 0);
+        assert!(
+            !stdout.contains("specialist: ui-design-systems-and-responsive-interfaces"),
+            "ui keyword should not match inside 'kiosk': {stdout}"
+        );
+    }
+
+    #[test]
+    fn route_json_format_emits_structured_payload() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "route".to_string(),
+                "--request".to_string(),
+                "audit production readiness".to_string(),
+                "--format".to_string(),
+                "json".to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        let output = String::from_utf8_lossy(&stdout).to_string();
+        assert!(output.contains("\"specialist\": \"reviewer\""));
+        assert!(output.contains("\"matchedKeyword\""));
+        assert!(output.contains("\"reason\""));
+    }
+
+    #[test]
+    fn route_missing_request_returns_error() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(&["route".to_string()], &mut stdout, &mut stderr);
+        assert_eq!(exit_code, 1);
+        assert!(String::from_utf8_lossy(&stderr).contains("--request is required"));
+    }
+
+    #[test]
+    fn route_accepts_positional_request() {
+        let mut stdout: Vec<u8> = Vec::new();
+        let mut stderr: Vec<u8> = Vec::new();
+        let exit_code = run_workflow_command(
+            &[
+                "route".to_string(),
+                "audit".to_string(),
+                "the".to_string(),
+                "release".to_string(),
+            ],
+            &mut stdout,
+            &mut stderr,
+        );
+        assert_eq!(exit_code, 0, "stderr: {}", String::from_utf8_lossy(&stderr));
+        assert!(String::from_utf8_lossy(&stdout).contains("specialist: reviewer"));
     }
 }
