@@ -60,4 +60,6 @@ claude-skills hook list           # List installed hooks
 claude-skills hook show           # Show hooks.json content
 claude-skills hook instructions   # Print this contract (markdown by default)
 claude-skills hook instructions --format json   # Same contract as a structured payload
+claude-skills hook diagnose       # Verify installed executable, settings.json, and managed hook entries
+claude-skills hook diagnose --format json       # Same checks as a structured payload
 ```

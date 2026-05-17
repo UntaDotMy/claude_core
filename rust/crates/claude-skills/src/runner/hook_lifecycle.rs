@@ -18,7 +18,7 @@ use crate::runner::shell_rewrite::{
     bash_command_for_executable_args, platform_default_command_for_executable_args,
     rewrite_command_text_for_shell, RewriteShell,
 };
-use crate::runtime::{display_path, resolve_claude_home, write_text};
+use crate::runtime::{display_path, installed_executable_path, resolve_claude_home, write_text};
 use crate::utility;
 
 const RAW_OUTPUT_DEFAULT_RETENTION_DAYS: u64 = 14;
@@ -57,7 +57,19 @@ pub fn run_hook_command(
 
         "instructions" => run_hook_instructions(&arguments[1..], standard_output, standard_error),
 
+        "diagnose" => run_hook_diagnose(&arguments[1..], standard_output, standard_error),
+
         "pre-tool-use" => run_hook_pre_tool_use(standard_output, standard_error),
+
+        // Stop and SubagentStop must never return a non-zero exit code.
+        // Claude Code treats a failing Stop hook as a signal to re-run the
+        // turn, which cascades into a stop loop. lifecycle_additional_context
+        // already returns empty string for these events, but routing them
+        // through run_hook_lifecycle leaves a regression surface — any future
+        // change that introduces context, mishandles serde, or panics could
+        // re-introduce the cascade. Short-circuit here so no downstream change
+        // can accidentally bring back the bug.
+        "stop" | "subagent-stop" => 0,
 
         "post-tool-use"
         | "post-tool-use-failure"
@@ -65,8 +77,6 @@ pub fn run_hook_command(
         | "permission-request"
         | "notification"
         | "user-prompt-submit"
-        | "stop"
-        | "subagent-stop"
         | "task-created"
         | "task-completed"
         | "teammate-idle"
@@ -680,9 +690,258 @@ fn render_hook_help(standard_output: &mut dyn Write) {
 
         standard_output,
 
-        "Usage: claude-skills hook [install|uninstall|list|show|instructions|pre-tool-use|post-tool-use|post-tool-use-failure|permission-request|notification|user-prompt-submit|stop|subagent-stop|task-created|task-completed|pre-compact|post-compact|session-start|session-end]"
+        "Usage: claude-skills hook [install|uninstall|list|show|instructions|diagnose|pre-tool-use|post-tool-use|post-tool-use-failure|permission-request|notification|user-prompt-submit|stop|subagent-stop|task-created|task-completed|pre-compact|post-compact|session-start|session-end]"
 
     );
+}
+
+fn run_hook_diagnose(
+    arguments: &[String],
+    standard_output: &mut dyn Write,
+    standard_error: &mut dyn Write,
+) -> u8 {
+    let mut flag_set = FlagSet::new("hook diagnose");
+    flag_set.string_flag("format", "text");
+
+    if let Err(parse_error) = flag_set.parse(arguments) {
+        let _ = writeln!(standard_error, "{}", parse_error.message);
+        return 1;
+    }
+
+    let format = flag_set.string_value("format").to_string();
+    if format != "text" && format != "json" {
+        let _ = writeln!(
+            standard_error,
+            "hook diagnose: --format must be 'text' or 'json'"
+        );
+        return 1;
+    }
+
+    let claude_home = match resolve_claude_home("") {
+        Ok(path) => path,
+        Err(error) => {
+            let _ = writeln!(standard_error, "{error}");
+            return 1;
+        }
+    };
+
+    let report = collect_hook_diagnostics(&claude_home);
+
+    if format == "json" {
+        match serde_json::to_string_pretty(&report.to_json()) {
+            Ok(rendered) => {
+                let _ = writeln!(standard_output, "{rendered}");
+            }
+            Err(error) => {
+                let _ = writeln!(standard_error, "Unable to render diagnose output: {error}");
+                return 1;
+            }
+        }
+    } else {
+        report.render_text(standard_output);
+    }
+
+    if report.healthy() {
+        0
+    } else {
+        2
+    }
+}
+
+#[derive(Debug)]
+struct HookDiagnostics {
+    claude_home: PathBuf,
+    installed_executable: PathBuf,
+    installed_executable_present: bool,
+    settings_path: PathBuf,
+    settings_present: bool,
+    settings_parses: Option<bool>,
+    managed_hook_command: Option<String>,
+    settings_points_at_installed: Option<bool>,
+    orphan_executable_siblings: Vec<PathBuf>,
+}
+
+impl HookDiagnostics {
+    fn healthy(&self) -> bool {
+        self.installed_executable_present
+            && self.settings_present
+            && self.settings_parses == Some(true)
+            && self.settings_points_at_installed == Some(true)
+            && self.orphan_executable_siblings.is_empty()
+    }
+
+    fn to_json(&self) -> JsonDocument {
+        let orphans: Vec<JsonDocument> = self
+            .orphan_executable_siblings
+            .iter()
+            .map(|path| JsonDocument::String(display_path(path)))
+            .collect();
+        serde_json::json!({
+            "claudeHome": display_path(&self.claude_home),
+            "installedExecutable": {
+                "path": display_path(&self.installed_executable),
+                "present": self.installed_executable_present,
+            },
+            "settings": {
+                "path": display_path(&self.settings_path),
+                "present": self.settings_present,
+                "parses": self.settings_parses,
+                "pointsAtInstalled": self.settings_points_at_installed,
+            },
+            "managedHookCommand": self.managed_hook_command,
+            "orphanExecutableSiblings": orphans,
+            "healthy": self.healthy(),
+        })
+    }
+
+    fn render_text(&self, output: &mut dyn Write) {
+        let check = |ok: bool| if ok { "ok" } else { "FAIL" };
+        let unknown = "unknown";
+
+        let _ = writeln!(output, "claude-skills hook diagnose");
+        let _ = writeln!(output, "  claude home: {}", display_path(&self.claude_home));
+        let _ = writeln!(
+            output,
+            "  installed executable [{}]: {}",
+            check(self.installed_executable_present),
+            display_path(&self.installed_executable)
+        );
+
+        if !self.settings_present {
+            let _ = writeln!(
+                output,
+                "  settings.json [FAIL]: missing at {}",
+                display_path(&self.settings_path)
+            );
+        } else {
+            let parses = match self.settings_parses {
+                Some(true) => "ok",
+                Some(false) => "FAIL",
+                None => unknown,
+            };
+            let points = match self.settings_points_at_installed {
+                Some(true) => "ok",
+                Some(false) => "FAIL",
+                None => unknown,
+            };
+            let _ = writeln!(
+                output,
+                "  settings.json [parse {parses}, points-at-installed {points}]: {}",
+                display_path(&self.settings_path)
+            );
+        }
+
+        if self.orphan_executable_siblings.is_empty() {
+            let _ = writeln!(output, "  orphan executable siblings [ok]: none");
+        } else {
+            let _ = writeln!(
+                output,
+                "  orphan executable siblings [FAIL]: {} found",
+                self.orphan_executable_siblings.len()
+            );
+            for orphan in &self.orphan_executable_siblings {
+                let _ = writeln!(output, "    {}", display_path(orphan));
+            }
+        }
+
+        let _ = writeln!(
+            output,
+            "  status: {}",
+            if self.healthy() {
+                "healthy"
+            } else {
+                "issues found"
+            }
+        );
+    }
+}
+
+fn collect_hook_diagnostics(claude_home: &Path) -> HookDiagnostics {
+    let installed_executable = installed_executable_path(claude_home);
+    let installed_executable_present = installed_executable.is_file();
+    let settings_path = claude_home.join(crate::hooks::claude::SETTINGS_FILE_NAME);
+    let settings_present = settings_path.is_file();
+
+    let (settings_parses, settings_points_at_installed) = if !settings_present {
+        (None, None)
+    } else {
+        match read_hooks_document(&settings_path) {
+            Ok(document) => {
+                let points =
+                    settings_points_at_installed_executable(&document, &installed_executable);
+                (Some(true), Some(points))
+            }
+            Err(_) => (Some(false), None),
+        }
+    };
+
+    let managed_hook_command = managed_hook_command().ok();
+    let orphan_executable_siblings = crate::manager::install::find_executable_orphans(claude_home);
+
+    HookDiagnostics {
+        claude_home: claude_home.to_path_buf(),
+        installed_executable,
+        installed_executable_present,
+        settings_path,
+        settings_present,
+        settings_parses,
+        managed_hook_command,
+        settings_points_at_installed,
+        orphan_executable_siblings,
+    }
+}
+
+fn settings_points_at_installed_executable(
+    document: &JsonDocument,
+    installed_executable: &Path,
+) -> bool {
+    let installed_lower = display_path(installed_executable).to_ascii_lowercase();
+    // Path matches must be full path. A file-name-only fallback would
+    // accept stale settings that point at a sibling executable (e.g.
+    // claude_home/elsewhere/claude-skills.exe) just because the file name
+    // matches, which is exactly the misconfiguration this check is meant
+    // to catch.
+
+    let Some(hooks) = document.get("hooks").and_then(JsonDocument::as_object) else {
+        return false;
+    };
+
+    let mut managed_seen = false;
+    let mut all_managed_point_at_installed = true;
+
+    for (_event_name, event_entries) in hooks.iter() {
+        let Some(entries) = event_entries.as_array() else {
+            continue;
+        };
+        for matcher_entry in entries {
+            let Some(commands) = matcher_entry.get("hooks").and_then(JsonDocument::as_array) else {
+                continue;
+            };
+            for command_entry in commands {
+                let Some(command) = command_entry.get("command").and_then(JsonDocument::as_str)
+                else {
+                    continue;
+                };
+                if !is_managed_hook_command(command) {
+                    continue;
+                }
+                managed_seen = true;
+                let command_lower = command.to_ascii_lowercase();
+                let decoded_lower = decode_powershell_encoded_command(command)
+                    .map(|decoded| decoded.to_ascii_lowercase());
+                let plain_match = command_lower.contains(&installed_lower);
+                let decoded_match = decoded_lower
+                    .as_ref()
+                    .map(|decoded| decoded.contains(&installed_lower))
+                    .unwrap_or(false);
+                if !(plain_match || decoded_match) {
+                    all_managed_point_at_installed = false;
+                }
+            }
+        }
+    }
+
+    managed_seen && all_managed_point_at_installed
 }
 
 fn is_help_argument(argument: &str) -> bool {
@@ -1232,6 +1491,45 @@ mod tests {
     }
 
     #[test]
+    fn powershell_encoded_command_roundtrips_to_runnable_script() {
+        // The hook entry on Windows is shipped as a base64-encoded UTF-16 LE
+        // PowerShell script. Claude Code launches it with `powershell.exe
+        // -EncodedCommand <payload>`, so the payload must decode back to a
+        // script that references the installed executable and the requested
+        // hook subcommand. A regression in base64_encode (chunk loop), UTF-16
+        // endianness, or the script template would silently produce a
+        // command Claude Code can run but that does nothing useful — and
+        // because is_managed_hook_command does its own decode, the entry
+        // would still look "managed" while pointing at gibberish.
+        let executable = if cfg!(windows) {
+            Path::new(r"C:\Users\Example User\.claude\claude-skills.exe")
+        } else {
+            Path::new("/home/example/.claude/claude-skills")
+        };
+        for subcommand in ["pre-tool-use", "session-start", "post-compact", "stop"] {
+            let arguments = format!("hook {subcommand}");
+            let command = hook_command_for_executable_args(executable, &arguments);
+
+            if cfg!(windows) {
+                let decoded = decode_powershell_encoded_command(&command)
+                    .unwrap_or_else(|| panic!("decode failed for {subcommand}: {command}"));
+                let executable_lower = executable.to_string_lossy().to_ascii_lowercase();
+                assert!(
+                    decoded.to_ascii_lowercase().contains(&executable_lower),
+                    "decoded script for {subcommand} must reference the installed executable; got: {decoded}"
+                );
+                assert!(
+                    decoded.contains(&arguments),
+                    "decoded script for {subcommand} must include `{arguments}`; got: {decoded}"
+                );
+            } else {
+                // Unix wrappers are already plain bash; no encoding to verify.
+                assert!(command.contains(&arguments));
+            }
+        }
+    }
+
+    #[test]
     fn managed_hook_detection_handles_encoded_powershell_commands() {
         let path = Path::new(r"C:\Users\Example User\.claude\claude-skills.exe");
 
@@ -1378,6 +1676,161 @@ mod tests {
                     .and_then(JsonDocument::as_str)
                     .is_some(),
                 "{subcommand} must emit systemMessage as a top-level string"
+            );
+        }
+    }
+
+    #[test]
+    fn diagnose_reports_healthy_when_settings_point_at_installed_executable() {
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-healthy-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&claude_home);
+        std::fs::create_dir_all(&claude_home).unwrap();
+
+        let executable = crate::runtime::installed_executable_path(&claude_home);
+        std::fs::write(&executable, b"installed").unwrap();
+
+        let pre_tool_command = hook_command_for_executable_args(&executable, "hook pre-tool-use");
+        let settings_path = claude_home.join(crate::hooks::claude::SETTINGS_FILE_NAME);
+        let payload = build_hooks_payload(&settings_path, &pre_tool_command).unwrap();
+        std::fs::write(&settings_path, &payload).unwrap();
+
+        let report = collect_hook_diagnostics(&claude_home);
+
+        assert!(
+            report.healthy(),
+            "expected healthy diagnose, got {report:?}"
+        );
+        assert_eq!(report.settings_parses, Some(true));
+        assert_eq!(report.settings_points_at_installed, Some(true));
+        assert!(report.orphan_executable_siblings.is_empty());
+
+        let _ = std::fs::remove_dir_all(&claude_home);
+    }
+
+    #[test]
+    fn diagnose_flags_settings_pointing_at_wrong_executable() {
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-mismatch-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&claude_home);
+        std::fs::create_dir_all(&claude_home).unwrap();
+
+        let executable = crate::runtime::installed_executable_path(&claude_home);
+        std::fs::write(&executable, b"installed").unwrap();
+
+        // settings.json points at a different binary (the historical
+        // ~/.claude/claude-skills.exe.stale-* leakage shape, where the hook
+        // was registered against an old path that no longer exists).
+        let other_path = claude_home
+            .join("elsewhere")
+            .join(executable_file_name_local());
+        std::fs::create_dir_all(other_path.parent().unwrap()).unwrap();
+        let other_command = hook_command_for_executable_args(&other_path, "hook pre-tool-use");
+        let settings_path = claude_home.join(crate::hooks::claude::SETTINGS_FILE_NAME);
+        let payload = build_hooks_payload(&settings_path, &other_command).unwrap();
+        std::fs::write(&settings_path, &payload).unwrap();
+
+        let report = collect_hook_diagnostics(&claude_home);
+
+        assert!(!report.healthy(), "expected unhealthy diagnose");
+        assert_eq!(report.settings_points_at_installed, Some(false));
+
+        let _ = std::fs::remove_dir_all(&claude_home);
+    }
+
+    #[test]
+    fn diagnose_flags_orphan_siblings_as_unhealthy() {
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-orphan-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&claude_home);
+        std::fs::create_dir_all(&claude_home).unwrap();
+
+        let executable = crate::runtime::installed_executable_path(&claude_home);
+        std::fs::write(&executable, b"installed").unwrap();
+
+        let pre_tool_command = hook_command_for_executable_args(&executable, "hook pre-tool-use");
+        let settings_path = claude_home.join(crate::hooks::claude::SETTINGS_FILE_NAME);
+        let payload = build_hooks_payload(&settings_path, &pre_tool_command).unwrap();
+        std::fs::write(&settings_path, &payload).unwrap();
+
+        // Drop a legacy stale sibling.
+        let orphan =
+            executable.with_file_name(format!("{}.stale-1778857819", executable_file_name_local()));
+        std::fs::write(&orphan, b"legacy").unwrap();
+
+        let report = collect_hook_diagnostics(&claude_home);
+
+        assert!(!report.healthy(), "orphan sibling must mark unhealthy");
+        assert_eq!(report.orphan_executable_siblings.len(), 1);
+
+        let _ = std::fs::remove_dir_all(&claude_home);
+    }
+
+    #[test]
+    fn diagnose_text_output_lists_failures() {
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-text-{}",
+            std::process::id()
+        ));
+        let _ = std::fs::remove_dir_all(&claude_home);
+        std::fs::create_dir_all(&claude_home).unwrap();
+
+        // No installed executable, no settings.json — every check fails.
+        let report = collect_hook_diagnostics(&claude_home);
+        let mut output = Vec::new();
+        report.render_text(&mut output);
+        let rendered = String::from_utf8(output).unwrap();
+
+        assert!(rendered.contains("[FAIL]"));
+        assert!(rendered.contains("issues found"));
+
+        let _ = std::fs::remove_dir_all(&claude_home);
+    }
+
+    fn executable_file_name_local() -> String {
+        if cfg!(windows) {
+            "claude-skills.exe".to_string()
+        } else {
+            "claude-skills".to_string()
+        }
+    }
+
+    #[test]
+    fn stop_and_subagent_stop_short_circuit_at_dispatch() {
+        // Stop and SubagentStop must always exit 0 with empty output, even if
+        // a future change to lifecycle_additional_context, the JSON renderer,
+        // or the rendering path itself would otherwise emit text or fail.
+        // run_hook_command short-circuits these events before they reach
+        // run_hook_lifecycle so no downstream regression can re-introduce the
+        // stop-cascade bug (Claude Code re-runs the turn on a non-zero Stop
+        // exit, which loops).
+        for subcommand in ["stop", "subagent-stop"] {
+            let mut stdout = Vec::new();
+            let mut stderr = Vec::new();
+
+            let code = run_hook_command(&[subcommand.to_string()], &mut stdout, &mut stderr);
+
+            assert_eq!(
+                code,
+                0,
+                "{subcommand} must always exit 0; stderr: {}",
+                String::from_utf8_lossy(&stderr)
+            );
+            assert!(
+                stdout.is_empty(),
+                "{subcommand} must emit no stdout; got: {}",
+                String::from_utf8_lossy(&stdout)
+            );
+            assert!(
+                stderr.is_empty(),
+                "{subcommand} must emit no stderr; got: {}",
+                String::from_utf8_lossy(&stderr)
             );
         }
     }
