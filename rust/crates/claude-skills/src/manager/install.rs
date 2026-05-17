@@ -31,6 +31,7 @@ pub struct InstallSummary {
     pub synced_agents: usize,
     pub synced_root_files: usize,
     pub removed_stale_files: usize,
+    pub removed_executable_orphans: usize,
     pub published_executable: bool,
 }
 
@@ -132,6 +133,7 @@ pub fn install_from_paths(
 
     write_managed_config(claude_home)?;
     let published_executable = publish_native_executable(repository_root, claude_home)?;
+    let removed_executable_orphans = remove_executable_orphans(claude_home)?;
     write_install_metadata(build_version, repository_root, claude_home)?;
     write_inventories(&layout, claude_home, &tracker)?;
     Ok(InstallSummary {
@@ -139,6 +141,7 @@ pub fn install_from_paths(
         synced_agents,
         synced_root_files,
         removed_stale_files,
+        removed_executable_orphans,
         published_executable,
     })
 }
@@ -188,6 +191,11 @@ pub fn write_install_summary(summary: &InstallSummary, output: &mut dyn Write) {
         output,
         "  Removed stale files: {}",
         summary.removed_stale_files
+    );
+    let _ = writeln!(
+        output,
+        "  Removed executable orphans: {}",
+        summary.removed_executable_orphans
     );
     let _ = writeln!(
         output,
@@ -514,6 +522,79 @@ fn sibling_temp_path(target: &Path) -> PathBuf {
     let mut name = target.file_name().map(|n| n.to_owned()).unwrap_or_default();
     name.push(".new");
     target.with_file_name(name)
+}
+
+/// Discover orphaned siblings of the installed executable. Two shapes are
+/// detected:
+///
+/// - `claude-skills.exe.stale-*` (and the unix equivalent): legacy artifacts
+///   from a pre-`33bf860` installer naming scheme that no current code path
+///   creates. Found in the wild on user disks; safe to delete.
+/// - `claude-skills.exe.new` (and the unix equivalent): atomic_copy_executable
+///   writes to this path before renaming. Normally removed on success or
+///   rename failure, but a process crash between fs::copy and fs::rename can
+///   strand it. Only flagged if it is older than the installed executable so
+///   we never race with a concurrent install.
+///
+/// Returns an empty vec when claude_home is unreadable or missing — diagnose
+/// callers treat that as "no orphans visible" rather than an error.
+pub fn find_executable_orphans(claude_home: &Path) -> Vec<PathBuf> {
+    let executable_name = executable_file_name();
+    let stale_prefix = format!("{executable_name}.stale-");
+    let new_suffix = format!("{executable_name}.new");
+    let installed_executable = installed_executable_path(claude_home);
+    let installed_modified = fs::metadata(&installed_executable)
+        .ok()
+        .and_then(|meta| meta.modified().ok());
+
+    let entries = match fs::read_dir(claude_home) {
+        Ok(entries) => entries,
+        Err(_) => return Vec::new(),
+    };
+
+    let mut orphans = Vec::new();
+    for entry_result in entries {
+        let entry = match entry_result {
+            Ok(entry) => entry,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        let Some(file_name) = path.file_name().and_then(|name| name.to_str()) else {
+            continue;
+        };
+
+        let is_stale = file_name.starts_with(&stale_prefix);
+        let is_abandoned_new = file_name == new_suffix
+            && match (
+                fs::metadata(&path).ok().and_then(|meta| meta.modified().ok()),
+                installed_modified,
+            ) {
+                (Some(orphan_time), Some(installed_time)) => orphan_time < installed_time,
+                // No installed executable means the .new is stranded with no
+                // active install to race with — safe to clean up.
+                (Some(_), None) => true,
+                _ => false,
+            };
+
+        if is_stale || is_abandoned_new {
+            orphans.push(path);
+        }
+    }
+
+    orphans
+}
+
+/// Remove orphaned siblings discovered by find_executable_orphans. Best-effort:
+/// a locked file (running .exe loader) or permission error must not fail the
+/// install — the next install will retry.
+fn remove_executable_orphans(claude_home: &Path) -> Result<usize, String> {
+    let mut removed = 0usize;
+    for orphan in find_executable_orphans(claude_home) {
+        if fs::remove_file(&orphan).is_ok() {
+            removed += 1;
+        }
+    }
+    Ok(removed)
 }
 
 fn executable_file_name() -> String {
@@ -999,6 +1080,99 @@ mod tests {
             "per-file inventory must be written"
         );
         let _ = fs::remove_dir_all(&repo);
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn remove_executable_orphans_deletes_legacy_stale_siblings() {
+        // Pre-`33bf860` installer used a `.stale-<timestamp>` naming scheme
+        // that no current code path creates. Found in the wild on user disks
+        // (e.g. C:\Users\riezh\.claude\claude-skills.exe.stale-1778857819).
+        // Cleanup is safe because nothing in the current source ever produces
+        // these names.
+        let (_repo, home) = unique_paths("orphan-stale");
+        fs::create_dir_all(&home).unwrap();
+        let executable = installed_executable_path(&home);
+        if let Some(parent) = executable.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(&executable, b"installed").unwrap();
+        let stale_a = executable.with_file_name(format!(
+            "{}.stale-1778857819",
+            executable_file_name()
+        ));
+        let stale_b = executable.with_file_name(format!(
+            "{}.stale-1234567890",
+            executable_file_name()
+        ));
+        fs::write(&stale_a, b"legacy").unwrap();
+        fs::write(&stale_b, b"legacy").unwrap();
+
+        let removed = remove_executable_orphans(&home).unwrap();
+
+        assert_eq!(removed, 2, "both legacy stale siblings must be cleaned up");
+        assert!(!stale_a.is_file());
+        assert!(!stale_b.is_file());
+        assert!(
+            executable.is_file(),
+            "installed executable must not be touched"
+        );
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn remove_executable_orphans_skips_fresh_dot_new_to_avoid_racing_install() {
+        // atomic_copy_executable writes to a `.new` sibling before renaming
+        // over the installed executable. A concurrent install would have a
+        // `.new` newer than the installed executable; deleting it would
+        // race that install. Only an abandoned `.new` (older than the
+        // installed binary, or with no installed binary present) is safe to
+        // remove.
+        let (_repo, home) = unique_paths("orphan-new-fresh");
+        fs::create_dir_all(&home).unwrap();
+        let executable = installed_executable_path(&home);
+        if let Some(parent) = executable.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        fs::write(&executable, b"installed").unwrap();
+        // Sleep so the .new mtime is strictly after the installed mtime.
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        let dot_new = executable.with_file_name(format!("{}.new", executable_file_name()));
+        fs::write(&dot_new, b"in-flight").unwrap();
+
+        let removed = remove_executable_orphans(&home).unwrap();
+
+        assert_eq!(
+            removed, 0,
+            "fresh .new must not be deleted — would race a concurrent install"
+        );
+        assert!(dot_new.is_file());
+        let _ = fs::remove_dir_all(&home);
+    }
+
+    #[test]
+    fn remove_executable_orphans_deletes_abandoned_dot_new() {
+        // A `.new` older than the installed executable is a crash artifact —
+        // atomic_copy_executable normally removes it on failure, but a
+        // process crash between fs::copy and fs::rename can strand it.
+        let (_repo, home) = unique_paths("orphan-new-stale");
+        fs::create_dir_all(&home).unwrap();
+        let executable = installed_executable_path(&home);
+        if let Some(parent) = executable.parent() {
+            fs::create_dir_all(parent).unwrap();
+        }
+        let dot_new = executable.with_file_name(format!("{}.new", executable_file_name()));
+        // Write the orphan first, then sleep, then write the installed
+        // executable so it is strictly newer.
+        fs::write(&dot_new, b"crash-leftover").unwrap();
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        fs::write(&executable, b"installed").unwrap();
+
+        let removed = remove_executable_orphans(&home).unwrap();
+
+        assert_eq!(removed, 1, "abandoned .new must be cleaned up");
+        assert!(!dot_new.is_file());
+        assert!(executable.is_file());
         let _ = fs::remove_dir_all(&home);
     }
 }
