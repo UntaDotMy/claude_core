@@ -566,7 +566,9 @@ pub fn find_executable_orphans(claude_home: &Path) -> Vec<PathBuf> {
         let is_stale = file_name.starts_with(&stale_prefix);
         let is_abandoned_new = file_name == new_suffix
             && match (
-                fs::metadata(&path).ok().and_then(|meta| meta.modified().ok()),
+                fs::metadata(&path)
+                    .ok()
+                    .and_then(|meta| meta.modified().ok()),
                 installed_modified,
             ) {
                 (Some(orphan_time), Some(installed_time)) => orphan_time < installed_time,
@@ -1097,14 +1099,10 @@ mod tests {
             fs::create_dir_all(parent).unwrap();
         }
         fs::write(&executable, b"installed").unwrap();
-        let stale_a = executable.with_file_name(format!(
-            "{}.stale-1778857819",
-            executable_file_name()
-        ));
-        let stale_b = executable.with_file_name(format!(
-            "{}.stale-1234567890",
-            executable_file_name()
-        ));
+        let stale_a =
+            executable.with_file_name(format!("{}.stale-1778857819", executable_file_name()));
+        let stale_b =
+            executable.with_file_name(format!("{}.stale-1234567890", executable_file_name()));
         fs::write(&stale_a, b"legacy").unwrap();
         fs::write(&stale_b, b"legacy").unwrap();
 

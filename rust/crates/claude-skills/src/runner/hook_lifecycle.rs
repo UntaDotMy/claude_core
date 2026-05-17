@@ -733,10 +733,7 @@ fn run_hook_diagnose(
                 let _ = writeln!(standard_output, "{rendered}");
             }
             Err(error) => {
-                let _ = writeln!(
-                    standard_error,
-                    "Unable to render diagnose output: {error}"
-                );
+                let _ = writeln!(standard_error, "Unable to render diagnose output: {error}");
                 return 1;
             }
         }
@@ -850,7 +847,11 @@ impl HookDiagnostics {
         let _ = writeln!(
             output,
             "  status: {}",
-            if self.healthy() { "healthy" } else { "issues found" }
+            if self.healthy() {
+                "healthy"
+            } else {
+                "issues found"
+            }
         );
     }
 }
@@ -866,10 +867,8 @@ fn collect_hook_diagnostics(claude_home: &Path) -> HookDiagnostics {
     } else {
         match read_hooks_document(&settings_path) {
             Ok(document) => {
-                let points = settings_points_at_installed_executable(
-                    &document,
-                    &installed_executable,
-                );
+                let points =
+                    settings_points_at_installed_executable(&document, &installed_executable);
                 (Some(true), Some(points))
             }
             Err(_) => (Some(false), None),
@@ -915,16 +914,11 @@ fn settings_points_at_installed_executable(
             continue;
         };
         for matcher_entry in entries {
-            let Some(commands) = matcher_entry
-                .get("hooks")
-                .and_then(JsonDocument::as_array)
-            else {
+            let Some(commands) = matcher_entry.get("hooks").and_then(JsonDocument::as_array) else {
                 continue;
             };
             for command_entry in commands {
-                let Some(command) = command_entry
-                    .get("command")
-                    .and_then(JsonDocument::as_str)
+                let Some(command) = command_entry.get("command").and_then(JsonDocument::as_str)
                 else {
                     continue;
                 };
@@ -1512,12 +1506,7 @@ mod tests {
         } else {
             Path::new("/home/example/.claude/claude-skills")
         };
-        for subcommand in [
-            "pre-tool-use",
-            "session-start",
-            "post-compact",
-            "stop",
-        ] {
+        for subcommand in ["pre-tool-use", "session-start", "post-compact", "stop"] {
             let arguments = format!("hook {subcommand}");
             let command = hook_command_for_executable_args(executable, &arguments);
 
@@ -1693,8 +1682,10 @@ mod tests {
 
     #[test]
     fn diagnose_reports_healthy_when_settings_point_at_installed_executable() {
-        let claude_home = std::env::temp_dir()
-            .join(format!("claude-skills-diagnose-healthy-{}", std::process::id()));
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-healthy-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&claude_home);
         std::fs::create_dir_all(&claude_home).unwrap();
 
@@ -1721,8 +1712,10 @@ mod tests {
 
     #[test]
     fn diagnose_flags_settings_pointing_at_wrong_executable() {
-        let claude_home = std::env::temp_dir()
-            .join(format!("claude-skills-diagnose-mismatch-{}", std::process::id()));
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-mismatch-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&claude_home);
         std::fs::create_dir_all(&claude_home).unwrap();
 
@@ -1732,7 +1725,9 @@ mod tests {
         // settings.json points at a different binary (the historical
         // ~/.claude/claude-skills.exe.stale-* leakage shape, where the hook
         // was registered against an old path that no longer exists).
-        let other_path = claude_home.join("elsewhere").join(executable_file_name_local());
+        let other_path = claude_home
+            .join("elsewhere")
+            .join(executable_file_name_local());
         std::fs::create_dir_all(other_path.parent().unwrap()).unwrap();
         let other_command = hook_command_for_executable_args(&other_path, "hook pre-tool-use");
         let settings_path = claude_home.join(crate::hooks::claude::SETTINGS_FILE_NAME);
@@ -1749,8 +1744,10 @@ mod tests {
 
     #[test]
     fn diagnose_flags_orphan_siblings_as_unhealthy() {
-        let claude_home = std::env::temp_dir()
-            .join(format!("claude-skills-diagnose-orphan-{}", std::process::id()));
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-orphan-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&claude_home);
         std::fs::create_dir_all(&claude_home).unwrap();
 
@@ -1763,10 +1760,8 @@ mod tests {
         std::fs::write(&settings_path, &payload).unwrap();
 
         // Drop a legacy stale sibling.
-        let orphan = executable.with_file_name(format!(
-            "{}.stale-1778857819",
-            executable_file_name_local()
-        ));
+        let orphan =
+            executable.with_file_name(format!("{}.stale-1778857819", executable_file_name_local()));
         std::fs::write(&orphan, b"legacy").unwrap();
 
         let report = collect_hook_diagnostics(&claude_home);
@@ -1779,8 +1774,10 @@ mod tests {
 
     #[test]
     fn diagnose_text_output_lists_failures() {
-        let claude_home = std::env::temp_dir()
-            .join(format!("claude-skills-diagnose-text-{}", std::process::id()));
+        let claude_home = std::env::temp_dir().join(format!(
+            "claude-skills-diagnose-text-{}",
+            std::process::id()
+        ));
         let _ = std::fs::remove_dir_all(&claude_home);
         std::fs::create_dir_all(&claude_home).unwrap();
 
@@ -1817,14 +1814,11 @@ mod tests {
             let mut stdout = Vec::new();
             let mut stderr = Vec::new();
 
-            let code = run_hook_command(
-                &[subcommand.to_string()],
-                &mut stdout,
-                &mut stderr,
-            );
+            let code = run_hook_command(&[subcommand.to_string()], &mut stdout, &mut stderr);
 
             assert_eq!(
-                code, 0,
+                code,
+                0,
                 "{subcommand} must always exit 0; stderr: {}",
                 String::from_utf8_lossy(&stderr)
             );
